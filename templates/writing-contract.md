@@ -28,7 +28,10 @@ scene_type: real       # real | dream | memory | hypothetical | other
   - (1行1イベント)
 - **forbidden** — 避けるべき出来事・開示してはいけない情報:
   - (1行1項目)
+- **agency** — 誰が・何を選ぶ/決めるか (主体性ビート。受動的なシーンを
+  計画段で可視化する):
 - **state_changes** — 終了時点で変化する状態:
+- **end_state** — シーンの終着点1行 (これを越えたらオーバーラン):
 - **connections** — 上位アークとのつながり・前後シーンへの因果的接続:
 - **style** — 文体・視点・テンポなどの表現方針:
 - **fixed_vs_flexible** — どの要素が固定で、どの要素が柔軟か:

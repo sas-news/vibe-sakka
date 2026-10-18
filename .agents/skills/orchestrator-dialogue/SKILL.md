@@ -24,6 +24,9 @@ description: オーケストレーターとして作者と対話する規範。�
 1. **コンテキストを読む**: `work.md` → `canon/facts.md` → `plan/tree.md`
    → `entities.md` → `knowledge.md` → pending の `proposals/`。
    直近の `dialogue.md` 末尾も見る。
+   **セッション開始時はまず未記録の手編集差分がないか確認する**
+   (git status 等): scenes/ の差分は manual_edit、canon/plan/entities/
+   等の直接編集は force_override として変更セットを提案する。
 2. **発言を分類する**: 相談 / 情報照会 / 新規決定 / 本文生成 / 修正 /
    強制改変。
 3. **分類ごとに処理**:
