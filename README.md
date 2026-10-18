@@ -1,4 +1,4 @@
-# Vibe作家 (vibe-sakka) — AI執筆ワークスペース規範キット
+# Vibe作家 — AI執筆ワークスペース規範キット
 
 AIエージェントを**物語のオーケストレーター**として動かすための規範セット。
 人間はノリと方向性だけを語り、正典・時系列・知識・計画の帳簿仕事はすべて
@@ -41,20 +41,14 @@ cp -r /path/to/vibe-sakka/. .   # 末尾「/.」で .agents/ 等のドットフ�
 
 ## ハーネス別のスキル配置
 
-スキルは `.agents/skills/` に置いてある — Codex・Cursor・Gemini CLI・
-OpenCode・Amp・Cline など多くのハーネスがプロジェクト内スキルを探す共通の
-場所 (Agent Skills 規格) で、ディレクトリごとコピーすれば自動認識される。
+| ハーネス | スキルの置き場所 |
+| --- | --- |
+| Codex / Cursor / Gemini CLI / OpenCode / Amp / Cline … | `.agents/skills/` のまま自動認識 |
+| Devin | `.devin/skills/` にコピー |
+| Claude Code | `.claude/skills/` にコピー |
+| その他 | `AGENTS.md` 内の対応表から各 SKILL.md を辿って運用 |
 
-| ハーネス | スキルの置き場所 | 規範本体 |
-| --- | --- | --- |
-| `.agents/skills/` 対応 (Codex, Cursor, Gemini CLI, OpenCode, Amp, Cline …) | そのまま自動認識 | `AGENTS.md` |
-| Devin | `.agents/skills/*` を `.devin/skills/` にコピー | `AGENTS.md` |
-| Claude Code | `.agents/skills/*` を `.claude/skills/` にコピー | `AGENTS.md` をそのまま読む (v2.1.277+ は CLAUDE.md なしなら AGENTS.md をネイティブ対応) |
-| その他・未対応 | `AGENTS.md` 内の対応表から各 SKILL.md への経路を辿って運用 | `AGENTS.md` |
-
-スキルをどこにも置かなくても AGENTS.md が常時読まれる規範本体として機能し、
-対応表から手順ファイルへ辿れる。各 SKILL.md は frontmatter の description で
-用途を宣言済み (対応ハーネスではそれが呼び出しのトリガーになる)。
+スキルをどこにも置かなくても `AGENTS.md` が常時読まれて規範として機能する。
 
 ## ディレクトリ構成 (作品ディレクトリ)
 
