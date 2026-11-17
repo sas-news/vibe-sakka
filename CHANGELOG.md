@@ -59,13 +59,37 @@ v2 は、面白さを設計・検査・改稿・公開する工程を追加し�
 - 12話 8,500 字の要約体を「出荷可」にしたレビュー基準を、
   興味監査 + 推敲 + 公開ゲートに置き換え。
 
+### 監査修正 (独立レビュー2本の指摘を反映)
+
+- `export --release` を `build/staging/` 経由に変更。ゲート不合格時は `out/` を
+  一切変更しない (v1 の「未推敲のまま公開物が更新される」経路を封鎖)。
+- 公開ゲートの lint 対象を `out/*.md` から `out/*.txt` + `scenes/*.md` へ拡張。
+  ソース側の `(了)` 重複・URL・stale export も見逃さない。
+- ゲートが `reviews/beta-*.md` (external + interest_gate: pass + スコアカード) と
+  `reviews/polish-*.md` (before/after または cut_rate) の**中身**を必須化。
+  空ファイル・テンプレコピーでは合格しない。
+- 「面白さの設計」7項目を個別検査 (blockquote・プレースホルダ・記入例を値と
+  みなさない)。`craft/engine.md` の必須要素とテンプレコピーも検査。
+- 伏線の期限を `期限: YYYY-MM-DD` から読み、`張設:` の日付を誤認しない。
+- `L004` の同一文重複を章スコープ化 (章間のモチーフ反復は W)。
+- `L006` の「未定」をプレースホルダ文脈のみに限定 (地の文の「未定」は通す)。
+- 自動レポート `reviews/release-<date>.md` と手動チェックリスト
+  `reviews/release-checklist-<date>.md` を分離。`--no-report` を追加。
+- `--legacy` は v1 形式の互換のみ (設計/craft/polished/plan 解析を warn)。
+  polish/beta 記録・out/ 清浄・lint E は legacy でも error。
+- CI に sample-work の lint / gate / `export --release` を追加。
+- docs: VERIFICATION の実測値更新、MIGRATION の `--fix` 対象と N.md リネーム手順、
+  DESIGN の I/F (staging/--no-report/検査範囲/legacy)、AGENTS の全ファイル索引を追加。
+
 ### 非互換
 
 - `out/` の用途が「生成物すべて」から「公開物のみ」に変わった。
   既存作品は `docs/MIGRATION.md` に従い、作業物を `plan/` `research/` `build/`
   へ移す。
-- v1 の `scenes/` はそのまま読める (`--legacy`)。`polished: true` が無い
-  シーンは公開ゲートで警告になる。推敲してフラグを立てる。
+- v1 の `scenes/` は `--legacy` で lint / gate できる。ただし export は
+  `scenes/<E-S>.md` 前提のため、v1 の `scenes/<N>.md` (1話1ファイル) は
+  `scenes/<N>-1.md` へリネームする (`docs/MIGRATION.md` §8.4)。
+  `polished: true` が無いシーンは公開ゲートで警告になる。推敲してフラグを立てる。
 
 ## v1.0.0 — 2026-10-18
 

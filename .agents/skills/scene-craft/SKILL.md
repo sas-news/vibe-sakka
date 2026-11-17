@@ -120,9 +120,11 @@ DESIGN §4 の detonator を場面に1つ。「予想→裏切り→伏線」の
 「名簿を閉じる」が再現できるなら場面。「複雑な気持ちになった」だけなら要約。
 
 ### 18. 契約を approved にする
-埋めた craft 欄を `contracts/<E-S>.md` に記入し `status: approved` にする。
-`plan/tree.md` のシーン状態も approved に。**ここまでが本文生成の前提**で、
-`write-scene` は approved でない契約では書かない。
+**必須は `scene_job` / `dramatic_question` / `want` / `obstacle` / `turn` /
+`cost` の6項目。** 1つでも空なら approved にしない (write-scene のゲートも
+この6項目を見る)。埋めた craft 欄を `contracts/<E-S>.md` に記入し
+`status: approved` にする。`plan/tree.md` のシーン状態も approved に。
+**ここまでが本文生成の前提**で、`write-scene` は approved でない契約では書かない。
 
 ## 記入例
 
@@ -162,8 +164,8 @@ prohibit_summary: true
 - **concrete_details が形容詞**: 「美しい」「古い」は具体物ではない。
 - **subtext なし**: 全員が本音を言い、台詞が説明になる。
 - **場面を2つ混ぜる**: turn が2つある契約は2場面に分ける。
-- **全欄を埋めようとする**: 探索的な場面は role・pov・forbidden だけでもよい。
-  ただし want と turn は省かない。
+- **全欄を埋めようとする**: 探索的な場面は他の欄を開けてよいが、
+  **want / turn / cost は省かない** (必須6項目は空にしない)。
 
 ## 関連
 

@@ -1,31 +1,36 @@
-# reviews/release-2026-11-17.md — 公開前チェックリスト
+# reviews/release-checklist-20261117.md — 公開前チェックリスト (手動記録)
 
 ```yaml
 date: 2026-11-17
 work: "忘れ物預かり所"
 version: v1.0.0
 releaser: ai
+auto_report: reviews/release-20261117.md
 ```
 
 ## 0. 前提
 
 - [x] `polish` 済み (`reviews/polish-20261117.md`)
-- [x] `beta-read` を外部コンテキストで実施 (`reviews/beta-第1話-2026-11-17.md`)
-- [x] interest gate 合格 (high 0 / medium 2)
+- [x] `beta-read` を外部コンテキストで実施 (`reviews/beta-第1話-2026-11-17.md`、`context: external`)
+- [x] interest gate 合格 (high 0 / medium 0)
 - [x] 全シーンの契約が `status: approved`
 - [x] `scenes/*.md` の `polished: true`
 
 ## 1. 決定的検査 (コマンド)
 
 ```bash
+python3 tools/manuscript_lint.py --workdir . scenes/*.md
 python3 tools/manuscript_lint.py --workdir . out/*.md
+python3 tools/manuscript_lint.py out/*.txt
 python3 tools/release_gate.py --workdir .
 python3 tools/export.py --workdir . --release --md --txt
 ```
 
-- [x] lint: E 0件 / W 4件 (W005×2 / W008 / W010)
-- [x] release_gate: exit 0
-- [x] export --release: exit 0
+- [x] lint (scenes): E 0件 / W 3件
+- [x] lint (out md): E 0件 / W 4件、lint (out txt): E 0件 / W 5件、lint (scenes): E 0件 / W 3件
+- [x] release_gate: exit 0 (beta 記録 external・interest_gate: pass を検査済み)
+- [x] export --release: exit 0、`out/` は `.md` `.txt` のみ
+- [x] 3コマンドを同じ原稿に対して実行した。
 
 ## 2. 公開物 (out/) の清浄
 
@@ -49,4 +54,5 @@ python3 tools/export.py --workdir . --release --md --txt
 
 - [x] タイトル・版表記が正しい
 - [x] `work.md` status: active
+- [x] 自動レポート `reviews/release-20261117.md` を確認した
 - [x] 作者に公開可と生成物パスを報告

@@ -2,7 +2,9 @@
 
 v1 の作品データ (canon / plan / scenes / contracts / reviews) はそのまま使える。
 v2 は **規範・スキル・ツール・テンプレートを追加し、工程を足す**。既存原稿を
-壊さない。移行は「追加 → 検査 → 推敲 → 興味監査 → 公開ゲート」の順に進める。
+壊さない。ただし v1 の `scenes/<N>.md` (1話1ファイル) 形式は `scenes/<N>-1.md`
+へのリネームが必要 (§8.4)。移行は「追加 → 検査 → 推敲 → 興味監査 → 公開ゲート」
+の順に進める。
 
 ## 1. キットをコピーする
 
@@ -84,7 +86,15 @@ python3 tools/release_gate.py --workdir . --legacy
 - `W001` 感情の名指し、`W005` 反復、`W009` 要約体
 
 `--fix` で安全なもの (BOM/CRLF、行末空白、空行過多、重複した末尾 `(了)`、
-区切り統一) は自動修復できる。本文の語句は書き換えない。
+区切り統一) は自動修復できる。本文の語句は書き換えない。**`--fix` は正本の
+`scenes/*.md` に対して行う** (`python3 tools/manuscript_lint.py --fix scenes/*.md`)。
+`out/` は export で再生成される派生物なので fix しない (`--workdir` を付けて
+`out/*.md` を fix しても、次の export で戻る)。
+
+`--legacy` は検査を実行するフラグであり、検査を飛ばすフラグではない。v1 作品は
+`reviews/polish-*.md` がないため `release_gate.py --legacy` は
+**「推敲記録なし」で不合格になる (正常)**。§5〜§7 の移行手順を通してから
+公開判定する。
 
 ## 5. 原稿を救出する (推敲)
 
@@ -95,7 +105,8 @@ python3 tools/release_gate.py --workdir . --legacy
 3. 抽象語・感情語・比喩を具体物と動作に置換。
 4. 台詞だけ抜いて誰の発話か判別できるか確認。声を揃える。
 5. 章頭・章末のフックと引きを強化。
-6. `python3 tools/manuscript_lint.py --fix` → E 0 を確認。
+6. `python3 tools/manuscript_lint.py --fix scenes/*.md` → E 0 を確認
+   (`out/` は export の派生物なので fix しない)。
 7. `reviews/polish-<date>.md` に before/after 字数・削除率・主な変更を記録。
 
 **やってはいけない**: 字数を満たすための挿入 (膨張パス)。v1 がこれで
@@ -159,7 +170,9 @@ ls out/
 - `contracts/` は v2 の craft 欄がなくても動く (`release_gate --legacy`)。
   書き直す話から新しい契約に置き換える。
 - 過去の `reviews/` は履歴として残す。v2 の推敲記録・公開記録は
-  別ファイル (`polish-*.md` / `release-*.md`) に追記する。
+  別ファイル (`polish-*.md` / `release-*.md` / `release-checklist-*.md`) に
+  追記する。`release-<date>.md` は gate の自動生成 (上書き)、
+  `release-checklist-<date>.md` は手動チェックの記録。
 
 ### 8.4 v1 の `scenes/<N>.md` (1話1ファイル) 形式
 
@@ -168,8 +181,9 @@ v2 の `export.py` は `scenes/<E-S>.md` (例 `1-1.md`) を前提とするため
 次のどちらかで対応する:
 
 - **推奨**: ファイルを `scenes/<N>-1.md` にリネームする (第N話のシーン1)。
+  `git mv scenes/1.md scenes/1-1.md` のように行い、本文の内容は変えない。
   `plan/tree.md` のシーン行も `- シーン \`N-1\` ...` に直す。
-  本文の内容は変えない (`git mv` を使う)。
+  `scenes/history/1/` がある場合は `scenes/history/1-1/` へ同様に移す。
 - 一時的な回避: 公開順を明示して `--order 1-1,2-1,...` を渡す。
   ただしファイル名が `<E-S>` でないと export は読めないため、結局リネームが要る。
 
@@ -179,10 +193,13 @@ v2 の `export.py` は `scenes/<E-S>.md` (例 `1-1.md`) を前提とするため
 
 ### 8.5 既存作品の検証で fail するのが正常
 
-v1 作品に `release_gate.py --legacy` をかけると、`reviews/polish-*.md` が無い、
-`polished: true` が無い、`out/` に資料が混ざっている、などの理由で不合格になる。
-これは「v1 の成果物がそのままでは公開不可」という正しい判定である。
-`docs/MIGRATION.md` §4–7 の順に直してから再実行する。
+`--legacy` は検査を**実行する**フラグであり、検査を飛ばすフラグではない。
+craft ファイルや `polished: true` の欠落は警告に緩めるが、`reviews/polish-*.md`
+がない・`out/` に公開物以外がある、などは `--legacy` でも不合格になる。
+v1 作品に `release_gate.py --legacy` をかけて不合格になるのは
+「v1 の成果物がそのままでは公開不可」という正しい判定である (正常)。
+§4〜§7 の移行手順 (検査 → 推敲 → 興味監査 → 公開ゲート) を通してから
+公開判定する。
 
 ## 9. 移行チェックリスト
 

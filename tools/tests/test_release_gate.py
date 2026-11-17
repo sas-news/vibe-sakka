@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import release_gate  # noqa: E402
-from testlib import copy_fixture, read, run_tool  # noqa: E402
+from testlib import FIXTURES_DIR, copy_fixture, read, run_tool  # noqa: E402
 
 TODAY = "2026-11-17"
 
@@ -69,6 +69,107 @@ class GateV2OkTest(GateTestBase):
         self.assertIsNone(result.report_path)
 
 
+class GateContractContentTest(GateTestBase):
+    """ゲート検査の穴 (監査 Must fix) の回帰テスト。"""
+
+    fixture_name = "export_work"
+
+    def test_txt_is_linted(self):
+        """out/*.txt の URL / (了) 重複も検出する (fast M1)。"""
+        bad = self.workdir / "out" / "星の名前.txt"
+        bad.write_text("# 星の名前\n\n出典: https://example.com/x\n\n(了)\n\n(了)\n",
+                       encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("L001", proc.stdout)
+        self.assertIn("L009", proc.stdout)
+
+    def test_scenes_are_linted(self):
+        """scenes/ の E (L009) は out がクリーンでも不合格 (deep M3)。"""
+        scene = self.workdir / "scenes" / "1-2.md"
+        scene.write_text(read(scene) + "\n(了)\n\n(了)\n", encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("L009", proc.stdout)
+        self.assertIn("scenes", proc.stdout)
+        exported = run_tool("export.py", "--workdir", self.workdir, "--md",
+                            "--no-report")
+        self.assertEqual(exported.returncode, 1)
+
+    def test_beta_required(self):
+        """非 legacy では beta 記録が必須 (fast M2)。"""
+        (self.workdir / "reviews" / "beta-第1話-20261117.md").unlink()
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("beta", proc.stdout)
+        self.assertIn("beta-*.md", proc.stdout)
+
+    def test_beta_must_be_external_and_pass(self):
+        beta = self.workdir / "reviews" / "beta-第1話-20261117.md"
+        beta.write_text("# beta\n\n```yaml\ncontext: self\ninterest_gate: fail\n```\n",
+                        encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("external", proc.stdout)
+        self.assertIn("interest_gate", proc.stdout)
+
+    def test_polish_content_is_checked(self):
+        """空の polish 記録・数値なしは不合格 (fast M2 / deep M4)。"""
+        polish = self.workdir / "reviews" / "polish-20261101.md"
+        polish.write_text("", encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("空です", proc.stdout)
+        polish.write_text("# polish\n\n- 対象: 全シーン\n", encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("before/after", proc.stdout)
+
+    def test_empty_template_work_is_ng(self):
+        """templates/work.md を空のままコピーした作品は不合格 (deep M1)。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / "work"
+            copy_fixture("gate_template_empty", work)
+            proc = run_tool("release_gate.py", "--workdir", work,
+                            "--today", TODAY, "--no-report")
+            self.assertEqual(proc.returncode, 1)
+            self.assertIn("「約束」が空です", proc.stdout)
+            self.assertIn("テンプレート未記入", proc.stdout)
+            self.assertIn("面白さの設計", proc.stdout)
+
+    def test_foreshadowing_deadline_cases(self):
+        """期限: YYYY-MM-DD だけで判定し、張設の日付を誤認しない (deep M5)。"""
+        target = self.workdir / "foreshadowing.md"
+        # 未来の期限 → 合格
+        target.write_text((FIXTURES_DIR / "foreshadowing" / "future.md").read_text(
+            encoding="utf-8"), encoding="utf-8")
+        self.assertEqual(self.run_gate().returncode, 0)
+        # 過去の期限 → 不合格
+        target.write_text((FIXTURES_DIR / "foreshadowing" / "past.md").read_text(
+            encoding="utf-8"), encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("2020-06-01", proc.stdout)
+        self.assertNotIn("2020-01-01 (", proc.stdout)  # 張設の日付を期限にしない
+        # 期限なし → 合格 (警告のみ)
+        target.write_text((FIXTURES_DIR / "foreshadowing" / "no_deadline.md").read_text(
+            encoding="utf-8"), encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn("未記入の planted", proc.stdout)
+
+    def test_no_report_option(self):
+        proc = self.run_gate("--no-report")
+        self.assertEqual(proc.returncode, 0)
+        self.assertFalse((self.workdir / "reviews" / "release-20261117.md").exists())
+
+    def test_report_mentions_manual_checklist(self):
+        self.run_gate()
+        report = read(self.workdir / "reviews" / "release-20261117.md")
+        self.assertIn("自動生成", report)
+        self.assertIn("release-checklist-", report)
+
+
 class GateV2NgTest(GateTestBase):
     fixture_name = "gate_ng"
 
@@ -108,6 +209,18 @@ class GateLegacyTest(GateTestBase):
         self.assertIn("release gate: 合格", proc.stdout)
         self.assertIn("GATE W", proc.stdout)
         self.assertIn("--legacy", proc.stdout)
+
+    def test_legacy_without_polish_beta_fails(self):
+        """polish/beta の欠落は legacy でも error (公開判定は緩めない)。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / "work"
+            copy_fixture("gate_legacy_ng", work)
+            proc = run_tool("release_gate.py", "--workdir", work, "--legacy",
+                            "--today", TODAY, "--no-report")
+            self.assertEqual(proc.returncode, 1)
+            self.assertIn("reviews/polish-*.md がありません", proc.stdout)
+            self.assertIn("reviews/beta-*.md がありません", proc.stdout)
+            self.assertNotIn("( --legacy のため警告)", proc.stdout)
 
     def test_v2_mode_is_stricter(self):
         proc = self.run_gate()

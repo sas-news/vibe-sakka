@@ -55,8 +55,9 @@ description: 新しい作品を対話ヒアリングから立ち上げる。モ�
      恐怖・対立・代償・時計・約束・ジャンルの快楽を書く
    - `craft/voice.md` — `templates/craft-voice.md` を雛形に、サンプル段落・
      人称・テンポ・禁止語彙を書く
-   - 白紙なら先に `.agents/skills/spark/SKILL.md` で企画を面白くしてから
-     engine を書く (spark の内容はここに書かない)
+   - 白紙なら、骨格生成 (手順3) の**後**に `.agents/skills/spark/SKILL.md` で
+     企画を面白くしてから engine を書く (順序は init_work.py → spark →
+     engine。spark の内容はここに書かない)
 6. **憲章・ポリシーの確認**: 媒体・長さ・連載性・公開頻度、確定したいもの/
    意図的に未確定にするもの、許容する実験、変えてはならない前提、計画の
    先行範囲、自律運転ポリシー (off/draft/auto・上限・停止条件)。

@@ -85,9 +85,9 @@ E 1 / W 1 / I 0
 | L001 | URL / Markdown リンク / `出典:` `参照:` `資料:` `引用:` `ソース:` / `research/` 参照 | 不可 |
 | L002 | 台帳メタ混入 (`canon/` `contracts/` `scenes/` `plan/` `proposals/` `changesets/` `work.md`、`p-0001` `cs-0001` `f001` `ent-c01` `ev01` `fs01` `ke01` `rev N`) | 不可 |
 | L003 | ビート見出し (`一` `二` … の単独行)、`【…】` 単独行、本文中の `#` 見出し、`（第N話・了）` 等の制作メモ | 不可 |
-| L004 | 重複ブロック: 15 字以上の同一行が 2 回以上 / 同一章内の同一文 | 不可 |
+| L004 | 重複ブロック: 15 字以上の同一行が 2 回以上 / **同一章内**の同一文 (章をまたぐ反復は W) | 不可 |
 | L005 | 話見出しの順序異常 (欠番・重複・逆行) | 不可 |
-| L006 | プレースホルダ (`[※未執筆]` `TODO` `FIXME` `XXX` `要確認` `未定` `<<` `{{` `（※`) | 不可 |
+| L006 | プレースホルダ (`[※未執筆]` `TODO` `FIXME` `XXX` `要確認` `<<` `{{` `（※`)。「未定」は単独行・`（未定）`・`[未定]`・値が未定 のときだけ (通常文は通す) | 不可 |
 | L007 | stale export (`--workdir` 指定時のみ) | 不可 |
 | L008 | エンコーディング異常 (BOM / CRLF / CR 単独 / デコード不能) | BOM・改行の統一 |
 | L009 | `(了)` / `（了）` の重複、本文中の (了) | 末尾の 1 つを残して除去 |
@@ -132,8 +132,9 @@ python3 tools/manuscript_lint.py --fix --workdir . out/灯の話.md
 
 - 行頭の `# タイトル`、`## 第N話 タイトル` の見出し行
 - 区切り線 (`◆` `◇` `***` `---` など、その行だけのもの)
-- `(了)` `（了）` の行
 - 行をまたぐ改行・空白 (すべて除去して連結)
+
+`(了)` は本文の一部として比較します (区切り線と違い、正規化で除外しません)。
 
 逆に、**語句の変更・追加・欠落・順序変更はすべて差分**です。判定できない
 事情がある場合は L007 を無視せず、`export.py` で作り直してください。
@@ -141,9 +142,9 @@ python3 tools/manuscript_lint.py --fix --workdir . out/灯の話.md
 ### 既知の限界
 
 - 意味判断 (退屈・感情の動き・整合性) はしません。`beta-read` / `polish` の担当です。
-- L006 の「未定」は本文中でも検出します (意図的な用法は言い換えてください)。
+- L006 の「未定」はプレースホルダ文脈のみです。地の文の「行き先は未定だった」は通りません。
 - L008 はファイル単位の判定です。混在改行の位置までは示しません。
-- L004 の文重複は「同一文 20 字以上」の完全一致のみです。
+- L004 の文重複は「同一文 20 字以上」の完全一致のみです。章をまたぐ同一文は W に落とします (意図的なモチーフを止めないため)。
 - 章見出しのない原稿は全体を 1 章として扱います。
 
 ---
@@ -171,12 +172,14 @@ python3 tools/export.py [--workdir .] [--order 1-1,1-2,...]
 | `--workdir DIR` | 作品ディレクトリ (既定: カレント) |
 | `--order LIST` | 公開順を明示する。`plan/tree.md` を解析できないときの代替 |
 | `--title TITLE` | 作品タイトル。既定は `work.md` の `title:` |
+| `--separator SEP` | 同一話内のシーン間に入れる区切り (例: `◆`)。既定はなし |
 | `--separator SEP` | 同一話内のシーン間に入れる区切り (例: `◆`)。md/txt で同じ区切りになる。既定はなし |
 | `--md` | Markdown を出力 (既定で出力される) |
 | `--txt` | 投稿用プレーンテキストも出力 |
 | `--epub` | 最小 EPUB3 も出力 |
-| `--release` | さらに `release_gate` の検査を通す |
+| `--release` | `build/staging/` に生成し、`release_gate` 合格後にだけ `out/` へ移動 |
 | `--no-lint` | 書き出し前の lint をスキップ (非推奨) |
+| `--no-report` | `--release` 時にゲートのレポートを書かない (CI 用) |
 | `--legacy` | v1 作品の互換 (lint / gate に渡す) |
 | `--json` | 結果を JSON で stdout に出す |
 
@@ -212,8 +215,9 @@ python3 tools/export.py [--workdir .] [--order 1-1,1-2,...]
 ### lint と release
 
 - 書き出す前に生成内容を lint し、E が 1 件でもあれば **out/ に書かずに exit 1**。
-- `--release` は書き出し後に `release_gate.py` の検査を通します。ゲート不合格
-  なら exit 1 (書き出したファイルは残ります。理由はレポートに残ります)。
+- `--release` は `build/staging/` に生成し、`release_gate.py` が **合格したときだけ**
+  `out/` へ移動 (os.replace) します。不合格時は staging を消し、`out/` は
+  一切変更しません (公開済みの原稿を壊さない)。exit 1。
 - レポートは `build/export-report.md`: 公開順・話数・シーン数・文字数・lint の
   指摘・ゲート結果・出力ファイル。
 
@@ -232,30 +236,48 @@ python3 tools/export.py [--workdir .] [--order 1-1,1-2,...]
 ## 3. release_gate.py
 
 公開前ゲートです。1 つでも error があれば exit 1。レポートは
-`reviews/release-YYYYMMDD.md` に書きます (上書き可)。
+`reviews/release-YYYYMMDD.md` に書きます (上書き可・自動生成専用)。
+
+**`--legacy` は「公開判定の緩和」ではありません。** v1 形式の互換 (面白さの
+設計7項目・`craft/`・`polished: true`・`plan/tree.md` 解析の欠落) だけを警告に
+落とし、**`reviews/polish-*.md` と `reviews/beta-*.md` の欠落・中身不足、
+`out/` 汚染、lint E は legacy でも error** です。v1 作品は「何が足りないか」が
+出て不合格になり、推敲記録と外部読者テストを用意してから再実行します
+(`docs/MIGRATION.md` §8.5)。
+手動の公開チェックリストは `reviews/release-checklist-YYYYMMDD.md` に分けて
+書いてください (自動レポートは毎回上書きされるため、追記しても残りません)。
+`--no-report` を付けるとレポート自体を書きません (CI 用)。
 
 ```
 python3 tools/release_gate.py [--workdir .] [--legacy] [--json]
-                              [--today YYYY-MM-DD]
+                              [--no-report] [--today YYYY-MM-DD]
 ```
 
 | 検査 | 内容 | `--legacy` |
 | --- | --- | --- |
-| `work.md` | `status: active`、憲章の「面白さの設計」「禁じ手」「声」が空でない | 空欄は警告 |
-| `craft/` | `craft/engine.md` `craft/voice.md` が存在し空でない | 欠落は警告 |
+| `work.md` | `status: active`、面白さの設計の必須7項目 (約束/冒頭のフック/ジャンルの快楽/感情の弧/禁じ手/声/面白さの基準) が個別に実文で埋まっている (テンプレ説明・blockquote・`<…>` は値と数えない) | 空欄は警告 |
+| `craft/` | `craft/engine.md` `craft/voice.md` が存在し空でない。engine は必須要素 (約束/欲求/対立/代償/時計/快楽/禁じ手) に実文があり、テンプレート未記入コピーでない | 欠落は警告 |
+| 外部読者テスト | `reviews/beta-*.md` が 1 件以上あり、`reader:`/`context: external` と `interest_gate: pass` を含む | 同じ (error。v1 でも必須) |
 | 契約 | 計画上の全シーンに `contracts/E-S.md` があり `status: approved` | 同じ (error) |
 | 本文 | `scenes/E-S.md` があり `polished: true` | 未推敲は警告 |
-| 伏線 | `foreshadowing.md` に `[planted]` のまま回収期限 (`YYYY-MM-DD`) を過ぎたものがない | 同じ (error) |
-| 推敲記録 | `reviews/polish-*.md` が 1 件以上 | 同じ (error) |
+| 伏線 | `foreshadowing.md` の `[planted]` に `期限: YYYY-MM-DD` があり期限を過ぎていない (期限なしは警告。`張設:` の日付は期限と読まない) | 同じ (error/警告) |
+| 推敲記録 | `reviews/polish-*.md` が 1 件以上・空でない・`before_chars`/`after_chars` か `cut_rate` の数値がある・テンプレート未記入コピーでない | 同じ (error。v1 でも必須) |
 | `out/` 清浄 | `<title>.md` `.txt` `.epub` 以外 (ディレクトリ含む) がない | 同じ (error) |
-| lint | `out/*.md` を lint して E 0 件 | 同じ (E0) |
+| lint | `out/*.md`・`out/*.txt`・`scenes/*.md` を lint して E 0 件 (シーン単位では 200字下限は課さない)。`--release` 時は staging 原稿と stale も検査 | 同じ (E0) |
 
 - `--today` は伏線期限の基準日とレポート名に使います (テスト用。既定は今日)。
+- 表示は `release gate: 合格 (gate E 0 / W 0, lint E 0 / W 4)` のように
+  **lint の W 件数も併記**します (品質シグナルとして見る)。
 - `--json`: `{"ok":bool,"errors":[],"warnings":[],"checks":[],"report":path}`。
 
 ### 既知の限界
 
-- 伏線の期限は `YYYY-MM-DD` の日付だけを見ます。相対表現・話数指定は判定しません。
+- 伏線の期限は `期限: YYYY-MM-DD` の直後だけを読みます。`張設:` などの日付は
+  期限と誤認しません。相対表現・話数指定の回収予定は判定しません。
+- 期限が未記入の `[planted]` は **警告** (公開は止めない) です。回収予定日を
+  `期限:` で書くことを推奨します。
+- beta/polish の内容検査は「記録としての形」だけを見ます。スコアの妥当性や
+  外部コンテキストの真偽は機械では判定できません (記録の有無と申告を検査)。
 - 計画は `plan/tree.md` の v2 書式 (`## 第N話` + `- シーン \`E-S\``) が前提です。
   `--legacy` では解析できない場合に `scenes/*.md` で代用します (警告)。
 - 推敲記録 (`reviews/polish-*.md`) は v1 でも必要です。v1 作品を公開する前に
@@ -309,7 +331,10 @@ python3 tools/selftest.py lint   # test_lint だけ
   stale export (L007) / BOM・CRLF (L008) / `--fix` で 0 になる `fixable.md`
 - export: YAML ヘッダ除去・話見出し挿入・公開順・`--order`・txt/epub・
   lint E で書かない・`--release` 合格
-- release_gate: v2 合格 fixture / v2 不合格 fixture / v1 (`--legacy`) 合格 fixture
+- release_gate: v2 合格 fixture / v2 不合格 fixture / v1 (`--legacy`) 合格 fixture /
+  txt・scenes の lint、beta・polish の中身、面白さの設計の空洞、伏線期限の3ケース、
+  `--no-report`、テンプレート未記入コピーの不合格
+- export: `--release` 失敗時に out/ が byte-identical・成功時は staging から移動
 - init_work: 骨格生成・`--force` の扱い
 
 CI (`.github/workflows/kit-ci.yml`) は ubuntu-latest × Python 3.12 / 3.13 で
@@ -320,9 +345,18 @@ CI (`.github/workflows/kit-ci.yml`) は ubuntu-latest × Python 3.12 / 3.13 で
 ## 6. v1 作品での使い方 (`--legacy`)
 
 v1 作品は `craft/` と `polished:` がないため、v2 のゲートはそのままでは
-通りません。`--legacy` で craft・polished・憲章の空欄を **警告** に落として
-検査できます (契約 approved・推敲記録・伏線期限・out/ 清浄・lint E0 は
-v1 でも error のままです)。
+通りません。`--legacy` で **v1 形式の互換だけ** を警告に落として検査できます
+(面白さの設計7項目・`craft/`・`polished: true`・表形式 plan の解析欠落)。
+一方、次は legacy でも **error** のままです。
+
+- `reviews/polish-*.md` がない / 空 / `before_chars`・`after_chars` / `cut_rate` の
+  数値がない (推敲なしの公開を許さない)
+- `reviews/beta-*.md` がない / `external` でない / `interest_gate: pass` でない
+  (外部読者テストなしの公開を許さない)
+- `out/` に公開物以外がある / lint E がある
+
+つまり v1 作品の `--legacy` は「何が足りないか」を出して **不合格** になり、
+polish と beta の記録を用意してから再実行します (`docs/MIGRATION.md` §8.5)。
 
 ```bash
 # 1. 現状把握: まず lint でアーティファクトを洗い出す (ファイルは変えない)
@@ -343,8 +377,9 @@ v1 でよく落ちる点:
 - `out/` に企画書・調査・スクリプトが混ざっている → ゲートが error。
   `build/` か元の場所へ移す。
 - `reviews/polish-*.md` がない → `polish` を通して記録を作る。
-- `scenes/1.md` 形式 (1 話 1 シーン) は export の対象外 → シーン名を
-  `E-S` に揃えるか、v1 の export を継続する。
+- `scenes/N.md` 形式 (1 話 1 シーン) は export の対象外です (`--legacy` でも
+  解決しません)。`docs/MIGRATION.md` §8.4 に従い `scenes/N-1.md` にリネームして
+  ください (エラーメッセージにも案内が出ます)。
 - `(了)` の重複・区切りの混在・ビート見出しは lint E。`--fix` と手直しで消す。
 
 ---

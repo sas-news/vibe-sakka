@@ -18,10 +18,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: self-test (lint / export / release_gate / init_work)
         run: python3 tools/selftest.py
-
-      - name: sample-work lint (E 0)
-        run: python3 tools/manuscript_lint.py examples/sample-work/out/*.md
-
-      - name: sample-work release gate
-        run: python3 tools/release_gate.py --workdir examples/sample-work
-
+      - name: sample-work (lint + export --release)
+        run: |
+          python3 tools/manuscript_lint.py --workdir examples/sample-work \
+            examples/sample-work/out/*.md
+          python3 tools/export.py --workdir examples/sample-work \
+            --release --md --txt --no-report

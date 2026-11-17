@@ -40,7 +40,7 @@ writer プロンプトに「面白く書け」は一行もなく、帳簿の同�
 | 帳簿 | 短編でも全同期 | 短編は軽量モード。帳簿は必要になった時だけ |
 | 衛生 | 人の注意力 | `tools/` の決定論的 lint (URL/ID/ビート見出し/重複/stale) |
 
-## 30秒でわかる使い方
+## 最短手順 (クイックスタート)
 
 ```sh
 # 1. 作品ディレクトリを作る (テンプレート・craft/・build/・out/ を生成)
@@ -56,7 +56,7 @@ cd my-work
 #    「公開して」→ release-gate → export
 
 # 3. 公開前チェック (人が打ってもよい)
-python3 /path/to/vibe-sakka/tools/manuscript_lint.py out/*.md
+python3 /path/to/vibe-sakka/tools/manuscript_lint.py --workdir . out/*.md
 python3 /path/to/vibe-sakka/tools/release_gate.py
 ```
 
@@ -203,9 +203,12 @@ cp -r /path/to/vibe-sakka/.agents ./
 cp /path/to/vibe-sakka/AGENTS.md ./
 cp -r /path/to/vibe-sakka/tools ./
 cp -r /path/to/vibe-sakka/templates ./
-# 既存作品の検査 (craft/ や polished フラグがなくても動く)
+# 既存作品の診断 (v1 形式の互換。面白さの設計・craft/・polished フラグは warn)
 python3 tools/manuscript_lint.py --workdir . --legacy out/*.md
 python3 tools/release_gate.py --workdir . --legacy
+# --legacy でも推敲記録 (reviews/polish-*.md)・外部読者テスト (beta)・
+# out/ 清浄・lint E 0 は必須。v1 作品はこれらが無いため「不合格」になる (正常)。
+# 公開判定の前に MIGRATION §4-7 を通す。
 ```
 
 移行手順の詳細は `docs/MIGRATION.md`。既存原稿は「推敲 → 興味監査 →

@@ -11,7 +11,9 @@ spark の仕事は、本文を書く前に **面白さの仮説を言葉にす�
 
 ## いつ使うか
 
-- 新しい作品の立ち上げ時 (`init-work` の前段)。
+- 新しい作品の立ち上げ時 (`python3 tools/init_work.py` で骨格を作った直後。
+  出力先 (`proposals/` `work.md` `craft/engine.md`) は init_work.py が作るため、
+  **必ず骨格生成の後に走らせる**)。
 - 「何を書くか決まらない」「案が普通すぎる」と言われた時。
 - 既存企画が退屈だと判明し、作り直す時。
 
@@ -116,7 +118,8 @@ engine の「約束」は、読者がこの作品から受け取る快楽の約�
 - `proposals/p-XXXX-spark.md` に5案とゲート結果を残す (捨てた案も残す —
   後の巻き返しの材料になる)。
 - 採用理由を `dialogue.md` に1行。
-- `work.md` の status は `setup` のまま。`init-work` が `active` にする。
+- `work.md` の status は `setup` のまま (骨格生成時点の状態)。`active` 化は
+  `init-work` の手順8で、spark と craft の記入が終わってから行う。
 
 ## 出力・記録先
 

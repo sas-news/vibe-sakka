@@ -75,11 +75,15 @@ L006_PATTERNS = (
     (re.compile(r"(?<![A-Za-z0-9])(?:TODO|FIXME|XXX)(?![A-Za-z0-9])"),
      "TODO/FIXME/XXX"),
     (re.compile(r"要確認"), "要確認"),
-    (re.compile(r"未定"), "未定"),
     (re.compile(r"<<"), "<<"),
     (re.compile(r"\{\{"), "{{"),
     (re.compile(r"[（(]\s*※"), "（※"),
 )
+
+#: L006: 未定はプレースホルダ文脈 (単独行・括弧書き・値が未定) のみ E。
+L006_UNDECIDED_RE = re.compile(r"[（(\[【]\s*未定\s*[)）\]】]")
+L006_UNDECIDED_LINE_RE = re.compile(r"^(?:[-*]\s*)?(?:\*\*)?未定(?:\*\*)?\s*$")
+L006_UNDECIDED_VALUE_RE = re.compile(r"[:：]\s*(?:[（(\[【]\s*)?未定(?:\s*[)）\]】])?\s*$")
 
 L011_SCENE_ID_RE = re.compile(r"シーン\s*\d+-\d+")
 L011_BARE_ID_RE = re.compile(r"^\d+-\d+$")
@@ -321,6 +325,18 @@ def _chapter_ranges(body: list[tuple[int, str]],
 
 
 
+def _undecided_placeholder(stripped: str) -> bool:
+    """「未定」がプレースホルダ文脈 (単独行・括弧書き・値が未定) か。"""
+    if not stripped:
+        return False
+    bare = stripped.lstrip("-* ").strip().strip("*")
+    if L006_UNDECIDED_LINE_RE.match(bare):
+        return True
+    if L006_UNDECIDED_RE.search(stripped):
+        return True
+    return bool(L006_UNDECIDED_VALUE_RE.search(stripped))
+
+
 def _is_heading(text: str) -> bool:
     stripped = text.strip()
     return bool(CHAPTER_RE.match(stripped) or CHAPTER_ALLOW_RE.match(stripped)
@@ -363,6 +379,9 @@ def _scan_lines(report: Report, body: list[tuple[int, str]], name: str) -> None:
                 report.error("L006", "placeholder", name, lineno,
                              f"プレースホルダ({label})「{match.group(0)}」が残っています")
                 break
+        if _undecided_placeholder(stripped):
+            report.error("L006", "placeholder", name, lineno,
+                         "未定 がプレースホルダのまま残っています")
         match = L011_SCENE_ID_RE.search(text) or L011_BARE_ID_RE.match(stripped)
         if match:
             report.error("L011", "sceneid", name, lineno,
@@ -370,30 +389,51 @@ def _scan_lines(report: Report, body: list[tuple[int, str]], name: str) -> None:
 
 
 
-def _check_duplicates(report: Report, body: list[tuple[int, str]], name: str) -> None:
-    """L004: 同一行 (15字以上) の重複、同一章内の同一文の重複。"""
-    seen: dict[str, int] = {}
-    for lineno, text in body:
+def _check_duplicates(report: Report, body: list[tuple[int, str]],
+                      chapters: list[Chapter], name: str) -> None:
+    """L004: 同一行 (15字以上) / 同一文の重複。
+
+    DESIGN §5.1 の定義どおり **章内** の重複を E にし、章をまたぐ反復は
+    W (意図的なモチーフを止めないため) にする。
+    """
+    def chapter_of(index: int) -> int:
+        for number, chapter in enumerate(chapters):
+            if chapter.start <= index < chapter.end:
+                return number
+        return 0
+
+    seen_line: dict[str, tuple[int, int]] = {}
+    seen_sentence: dict[str, tuple[int, int]] = {}
+    for index, (lineno, text) in enumerate(body):
+        chapter_no = chapter_of(index)
         key = text.strip()
-        if len(key) < 15 or SEP_LINE_RE.match(key):
-            continue
-        if key in seen:
-            report.error("L004", "duplicate", name, lineno,
-                         f"同一行が重複しています (初出 {seen[key]} 行目)")
-        else:
-            seen[key] = lineno
-    sentence_seen: dict[str, int] = {}
-    for lineno, text in body:
+        if len(key) >= 15 and not SEP_LINE_RE.match(key):
+            if key in seen_line:
+                first_line, first_chapter = seen_line[key]
+                if first_chapter == chapter_no:
+                    report.error("L004", "duplicate", name, lineno,
+                                 f"同一行が重複しています (初出 {first_line} 行目)")
+                else:
+                    report.warn("L004", "duplicate", name, lineno,
+                                f"同一行が章をまたいで反復しています (初出 {first_line} 行目)")
+            else:
+                seen_line[key] = (lineno, chapter_no)
         for sentence in SENTENCE_SPLIT_RE.split(text):
             sentence = sentence.strip()
             if len(sentence) < 20:
                 continue
-            if sentence in sentence_seen:
-                report.error("L004", "duplicate", name, lineno,
-                             f"同一文が重複しています (初出 {sentence_seen[sentence]} 行目): "
-                             f"「{sentence[:30]}…」")
+            if sentence in seen_sentence:
+                first_line, first_chapter = seen_sentence[sentence]
+                if first_chapter == chapter_no:
+                    report.error("L004", "duplicate", name, lineno,
+                                 f"同一文が重複しています (初出 {first_line} 行目): "
+                                 f"「{sentence[:30]}…」")
+                else:
+                    report.warn("L004", "duplicate", name, lineno,
+                                f"同一文が章をまたいで反復しています "
+                                f"(初出 {first_line} 行目): 「{sentence[:30]}…」")
             else:
-                sentence_seen[sentence] = lineno
+                seen_sentence[sentence] = (lineno, chapter_no)
 
 
 def _check_order(report: Report, chapters: list[Chapter], name: str) -> None:
@@ -469,19 +509,22 @@ def _check_separators(report: Report, body: list[tuple[int, str]], name: str) ->
 
 
 def _check_short_chapters(report: Report, body: list[tuple[int, str]],
-                          chapters: list[Chapter], name: str) -> None:
-    """L012: 空シーン/極端な短さ (本文 200 字未満の話)。"""
+                          chapters: list[Chapter], name: str,
+                          min_chars: int = 200) -> None:
+    """L012: 空シーン/極端な短さ (本文 min_chars 字未満の話)。"""
+    if min_chars <= 0:
+        return
     if not chapters:
         chars = content_chars("\n".join(text for _, text in body))
-        if chars < 200:
+        if chars < min_chars:
             report.error("L012", "length", name, body[0][0] if body else 1,
-                         f"本文が短すぎます ({chars} 字 < 200 字)")
+                         f"本文が短すぎます ({chars} 字 < {min_chars} 字)")
         return
     for chapter in chapters:
         chars = content_chars("\n".join(text for _, text in body[chapter.start:chapter.end]))
-        if chars < 200:
+        if chars < min_chars:
             report.error("L012", "length", name, chapter.line,
-                         f"第{chapter.number}話の本文が短すぎます ({chars} 字 < 200 字)")
+                         f"第{chapter.number}話の本文が短すぎます ({chars} 字 < {min_chars} 字)")
 
 
 
@@ -635,7 +678,7 @@ def _normalize_for_compare(body: list[tuple[int, str]]) -> str:
             continue
         if len(stripped) <= 10 and SEP_LINE_RE.match(stripped):
             continue
-        if TERMINATOR_RE.match(stripped) or stripped == "---":
+        if stripped == "---":
             continue
         if index == 0 and TITLE_LINE_RE.match(stripped):
             continue
@@ -662,19 +705,46 @@ def _read_body(path: Path) -> tuple[list[tuple[int, str]], list[str]]:
     return _strip_metadata(source.text.splitlines()), source.encoding_errors
 
 
+def _scenes_combined(workdir: Path) -> str:
+    """scenes/*.md の本文を正規化して連結した文字列 (stale 比較用)。"""
+    scenes_dir = workdir / "scenes"
+    if not scenes_dir.is_dir():
+        return ""
+    scene_files = sorted(scenes_dir.glob("*.md"), key=_scene_sort_key)
+    return "".join(_normalize_for_compare(_read_body(path)[0])
+                   for path in scene_files)
+
+
+def is_fresh_export(manuscript: Path | str, workdir: Path) -> tuple[bool, str]:
+    """原稿が scenes/ の最新連結と一致するか (stale export でないか)。
+
+    返り値: (一致したか, 説明)。out/ 以外 (build/staging 等) の原稿にも使える。
+    """
+    scene_text = _scenes_combined(workdir)
+    if not scene_text:
+        return True, "scenes/ が空のため stale 検査を省略しました"
+    path = Path(manuscript)
+    out_text = _normalize_for_compare(_read_body(path)[0])
+    if out_text == scene_text:
+        return True, "export は最新です"
+    return False, (f"scenes と一致しません (stale export): "
+                   f"原稿 {len(out_text)}字 / scenes {len(scene_text)}字")
+
+
 def _check_stale(report: Report, workdir: Path, files: list[Path]) -> None:
     """L007: out/ の原稿と scenes/ の本文を正規化比較する。"""
     scenes_dir, out_dir = workdir / "scenes", workdir / "out"
     if not scenes_dir.is_dir():
         report.info("L007", "stale", str(workdir), 0, "scenes/ がないため stale 検査を省略")
         return
-    scene_files = sorted(scenes_dir.glob("*.md"), key=_scene_sort_key)
-    scene_text = "".join(_normalize_for_compare(_read_body(path)[0])
-                         for path in scene_files)
+    scene_text = _scenes_combined(workdir)
     if not scene_text:
         report.info("L007", "stale", str(scenes_dir), 0, "scenes の本文が空のため省略")
         return
-    targets = [path for path in files if path.parent.resolve() == out_dir.resolve()]
+    # stale 比較は Markdown 原稿だけ (txt は md の派生物なので比較しない)
+    targets = [path for path in files
+               if path.parent.resolve() == out_dir.resolve()
+               and path.suffix.lower() == ".md"]
     if not targets:
         targets = sorted(out_dir.glob("*.md")) if out_dir.is_dir() else []
     if not targets:
@@ -709,7 +779,8 @@ def _compute_stats(body: list[tuple[int, str]], chapters: list[Chapter],
 
 
 def lint_source(source: Source, legacy: bool = False,
-                glossary: set[str] | None = None) -> Report:
+                glossary: set[str] | None = None,
+                min_chars: int = 200) -> Report:
     """1ファイル分の Report を作る。"""
     report = Report()
     for message in source.encoding_errors:
@@ -720,11 +791,11 @@ def lint_source(source: Source, legacy: bool = False,
         return report
     chapters = split_chapters(body)
     _scan_lines(report, body, source.display)
-    _check_duplicates(report, body, source.display)
+    _check_duplicates(report, body, chapters, source.display)
     _check_order(report, chapters, source.display)
     _check_terminators(report, body, source.display)
     _check_separators(report, body, source.display)
-    _check_short_chapters(report, body, chapters, source.display)
+    _check_short_chapters(report, body, chapters, source.display, min_chars)
     _check_density(report, body, source.display, "W001", "emotion",
                    EMOTION_WORDS, THRESHOLDS["W001"][0])
     _check_density(report, body, source.display, "W002", "abstract",
@@ -745,14 +816,15 @@ def lint_source(source: Source, legacy: bool = False,
 
 
 def lint_files(files: list[Path], workdir: Path | None = None, legacy: bool = False,
-               glossary: set[str] | None = None) -> Report:
+               glossary: set[str] | None = None, min_chars: int = 200) -> Report:
     """複数ファイルを lint して1つの Report にまとめる。"""
     total = Report()
     dialogue_total = 0
     for path in files:
         source = Source(path, path.read_bytes())
         source.decode()
-        report = lint_source(source, legacy=legacy, glossary=glossary)
+        report = lint_source(source, legacy=legacy, glossary=glossary,
+                             min_chars=min_chars)
         total.errors.extend(report.errors)
         total.warnings.extend(report.warnings)
         total.infos.extend(report.infos)
@@ -771,11 +843,13 @@ def lint_files(files: list[Path], workdir: Path | None = None, legacy: bool = Fa
 
 
 def lint_text(text: str, name: str = "<text>", legacy: bool = False,
-              glossary: set[str] | None = None) -> Report:
-    """メモリ上の原稿テキストを lint する (export.py から使う)。"""
+              glossary: set[str] | None = None,
+              min_chars: int = 200) -> Report:
+    """メモリ上の原稿テキストを lint する (export.py / release_gate.py から使う)。"""
     source = Source(Path(name), text.encode("utf-8"))
     source.decode()
-    return lint_source(source, legacy=legacy, glossary=glossary)
+    return lint_source(source, legacy=legacy, glossary=glossary,
+                       min_chars=min_chars)
 
 
 BLANK_RE = re.compile(r"^\s*$")

@@ -3,14 +3,16 @@
 > 新規コンテキストで、正典・計画を持たない読者として読んだ記録。
 > severity は「読者離脱度」(実読者が本を閉じるか) で較正する。
 > スコアカードの観点定義は `templates/interest-scorecard.md`。
+> `context` と `interest_gate` は**記入必須**。空のままでは release-gate が
+> 不合格にする。`context: external` の根拠 (原稿のみを渡した) を本文中に1行残す。
 
 ```yaml
 target: <話・範囲>
-date: 2026-01-01
+date: <YYYY-MM-DD>
 manuscript: <export原稿へのパス>
-context: external      # external=新規コンテキスト / self=本文のみ再読 (代替)
+context: ""            # 記入必須: external=新規コンテキスト / self=本文のみ再読 (self は合格に数えない)
 scenes_reviewed: 0
-interest_gate: pending # pass | fail (scorecard の high 1 or medium 3 で fail)
+interest_gate: ""      # 記入必須: pass | fail (high 1 or medium 3 で fail)
 ```
 
 ## 興味スコアカード (必須)

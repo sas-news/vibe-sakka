@@ -62,9 +62,14 @@
 ### 短編モード (short, 既定)
 
 ```
-spark → engine → plan(簡易) → contract(1枚) → write-scene →
-beta-read(興味監査) → revise → polish → release-gate → export
+init_work.py (骨格生成: work.md/craft/) → spark → engine → plan(簡易) →
+contract(1枚) → write-scene → beta-read(興味監査) → revise → polish →
+release-gate → export
 ```
+
+最初に `python3 tools/init_work.py` で作品骨格を作る。spark の出力先
+(`proposals/`・`work.md`・`craft/engine.md`) は init_work.py が作るため、
+順序は **init_work → spark → engine**。active 化は `init-work` の手順8。
 
 - 正典・変更セット・提案は必要になった時だけ (初期生成は対話決定として
   直接 `canon/facts.md` に追記してよい)。契約は1シーン1枚、status: approved。
@@ -72,7 +77,8 @@ beta-read(興味監査) → revise → polish → release-gate → export
 
 ### 連載モード (serial)
 
-v1 の帳簿を維持しつつ、全工程に面白さのゲートを足す:
+`init_work.py --mode serial` で骨格を作り、spark → engine の順で面白さを設計する。
+以後は v1 の帳簿を維持しつつ、全工程に面白さのゲートを足す:
 
 - 話ごとに `hook / promise / detonator / payoff` を計画に記入。
 - 章ごとに外部読者テスト。high 1 or medium 3 で自律停止 → 改稿。
@@ -163,6 +169,47 @@ v1 の帳簿を維持しつつ、全工程に面白さのゲートを足す:
 | 自律運転 | `.agents/skills/autonomy` |
 
 技芸の正本は `docs/CRAFT.md`。迷ったらここに戻る。
+
+
+## 索引 — 全ファイルへの入口
+
+作業前に、必要なら以下から辿る。**ここに無いファイルは規範の一部ではない。**
+
+### ドキュメント
+
+- `docs/CRAFT.md` — 面白さの技芸 (フック・場面・台詞・具体化・退屈症状・採点)
+- `docs/PHILOSOPHY.md` — なぜ面白さを工程にするのか
+- `docs/DIAGNOSIS.md` — v1 の失敗モードと v2 の対応
+- `docs/DESIGN.md` — v2 の設計仕様 (tools I/F・スキル要件・DoD)
+- `docs/MIGRATION.md` — v1 作品の移行手順
+- `docs/VERIFICATION.md` — 検証手順と実測値
+
+### ツール (作品ディレクトリで実行)
+
+- `tools/manuscript_lint.py` — 原稿の衛生 lint (URL/台帳ID/ビート見出し/重複/stale)
+- `tools/export.py` — 計画順の export (md/txt/epub、`--release` でゲート)
+- `tools/release_gate.py` — 公開ゲート (契約・推敲・beta・out/ 清浄・lint)
+- `tools/init_work.py` — 作品ディレクトリの雛形生成
+- `tools/selftest.py` — ツールの自己テスト
+- `tools/README.md` — 各コマンドの I/F、終了コード、限界
+
+### テンプレート
+
+- `templates/work.md` — 作品情報 + 面白さの設計
+- `templates/writing-contract.md` — Writing Contract (craft 欄)
+- `templates/scene.md` — シーン本文ヘッダ (`polished` フラグ)
+- `templates/plan-tree.md` — 計画ツリー (hook/promise/detonator/payoff)
+- `templates/craft-engine.md` / `templates/craft-voice.md` — 物語エンジンと声
+- `templates/beta-review.md` / `templates/interest-scorecard.md` — 外部読者テスト
+- `templates/polish-report.md` / `templates/release-checklist.md` — 推敲・公開の記録
+- `templates/research-note.md` — 調査ノート (引用ファイアウォール)
+- `templates/{canon-facts,canon-history,entities,events,foreshadowing,knowledge,plan-tree,proposal,changeset,review,dialogue}.md` — 帳簿
+
+### 実例
+
+- `examples/before-after.md` — v1 要約体 → v2 場面化の実例 (規範の説明用)
+- `examples/sample-work/` — v2 規範で作った最小作品 (lint 0 / gate 合格)
+- `examples/README.md` — 実例の読み方
 
 ## 検査の3層
 

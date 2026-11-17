@@ -210,6 +210,40 @@ class ExportGateTest(ExportTestBase):
         self.assertEqual(data["reason"], "missing_scenes")
         self.assertEqual(data["missing"], ["2-1"])
 
+    def test_release_failure_keeps_out_untouched(self):
+        """--release が不合格なら out/ を一切変更しない (staging 経由)。"""
+        import hashlib
+
+        def md5(path: Path) -> str:
+            return hashlib.md5(path.read_bytes()).hexdigest()
+
+        before = md5(self.out_md)
+        (self.workdir / "reviews" / "beta-第1話-20261117.md").unlink()
+        proc = run_tool("export.py", "--workdir", self.workdir, "--release",
+                        "--txt", "--no-report")
+        self.assertEqual(proc.returncode, 1)
+        self.assertEqual(md5(self.out_md), before)
+        self.assertFalse((self.workdir / "out" / "星の名前.txt").exists())
+        self.assertFalse((self.workdir / "build" / "staging").exists())
+        report = read(self.workdir / "build" / "export-report.md")
+        self.assertIn("出力: なし", report)
+
+    def test_release_success_moves_from_staging(self):
+        proc = run_tool("export.py", "--workdir", self.workdir, "--release",
+                        "--txt", "--no-report")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertFalse((self.workdir / "build" / "staging").exists())
+        self.assertTrue((self.workdir / "out" / "星の名前.md").is_file())
+        self.assertTrue((self.workdir / "out" / "星の名前.txt").is_file())
+
+    def test_plan_error_mentions_v1_rename(self):
+        plan = self.workdir / "plan" / "tree.md"
+        plan.write_text("| 1 | I | 灯 | reviewed |\n", encoding="utf-8")
+        proc = run_tool("export.py", "--workdir", self.workdir)
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("N-1.md", proc.stderr)
+        self.assertIn("MIGRATION", proc.stderr)
+
     def test_workdir_missing_exit_2(self):
         proc = run_tool("export.py", "--workdir", fixture("does-not-exist"))
         self.assertEqual(proc.returncode, 2)

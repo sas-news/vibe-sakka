@@ -97,7 +97,8 @@ v1 は推敲という工程を持たず、`(了)` の重複・誤字・挿入破
 
 ```bash
 # 安全な自動修正 (BOM/CRLF・行末空白・空行過多・区切り統一・(了) 重複)
-python3 tools/manuscript_lint.py --fix --workdir . out/*.md
+# 対象は正本の scenes/*.md。out/ は export で再生成される派生物なので fix しない
+python3 tools/manuscript_lint.py --fix scenes/*.md
 
 # E 0 件になるまで確認 (本文の語句は --fix では変わらない)
 python3 tools/manuscript_lint.py --workdir . out/*.md

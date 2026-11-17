@@ -122,16 +122,27 @@ class StaleExportTest(unittest.TestCase):
         self.assertNotIn("L007", codes(proc.stdout))
 
     def test_stale_normalization_allows_headings_and_separators(self):
-        """見出し・区切り・(了) の差は許容して比較する。"""
+        """見出し・区切り線の差は許容して比較する。"""
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "work"
             shutil.copytree(fixture("export_work"), workdir)
             manuscript = workdir / "out" / "星の名前.md"
             text = read(manuscript)
             text = text.replace("\n\n## 第2話 名前\n\n", "\n\n◆\n\n## 第2話 名前\n\n")
-            manuscript.write_text(text + "\n(了)\n", encoding="utf-8")
+            manuscript.write_text(text, encoding="utf-8")
             proc = run_tool("manuscript_lint.py", "--workdir", workdir, manuscript)
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_stale_detects_terminator_difference(self):
+        """(了) は本文の一部として比較する (正規化から除外しない)。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp) / "work"
+            shutil.copytree(fixture("export_work"), workdir)
+            manuscript = workdir / "out" / "星の名前.md"
+            manuscript.write_text(read(manuscript) + "\n(了)\n", encoding="utf-8")
+            proc = run_tool("manuscript_lint.py", "--workdir", workdir, manuscript)
+            self.assertEqual(proc.returncode, 1)
+            self.assertIn("L007", codes(proc.stdout))
 
 
 class LintCliTest(unittest.TestCase):
@@ -193,6 +204,28 @@ class LintUnitTest(unittest.TestCase):
         report = manuscript_lint.lint_text(text, name="bad_outline.md")
         self.assertFalse(report.ok)
         self.assertIn("L003", {finding.code for finding in report.errors})
+
+    def test_undecided_in_prose_is_not_error(self):
+        """通常文の「未定」は E にしない (M6 回帰)。"""
+        text = "行き先は未定だった。彼女は切符を買わなかった。"
+        report = manuscript_lint.lint_text(text, name="x.md", min_chars=0)
+        self.assertEqual(report.errors, [])
+
+    def test_undecided_placeholder_is_error(self):
+        for text in ("未定", "（未定）", "[未定]", "- **出発日**: 未定"):
+            report = manuscript_lint.lint_text(text, name="x.md", min_chars=0)
+            self.assertIn("L006", {finding.code for finding in report.errors}, text)
+
+    def test_l004_is_chapter_scoped(self):
+        """章内の同一文は E、章をまたぐ反復は W (M7 回帰)。"""
+        sentence = "ミナは傘を置いて、しばらく黙っていた。窓の外は雨だった。"
+        within = f"## 第1話 朝\n\n{sentence}\n\n{sentence}\n"
+        report = manuscript_lint.lint_text(within, name="x.md", min_chars=0)
+        self.assertIn("L004", {finding.code for finding in report.errors})
+        across = (f"## 第1話 朝\n\n{sentence}\n\n## 第2話 夜\n\n{sentence}\n")
+        report = manuscript_lint.lint_text(across, name="x.md", min_chars=0)
+        self.assertEqual(report.errors, [])
+        self.assertIn("L004", {finding.code for finding in report.warnings})
 
     def test_strip_metadata(self):
         text = read(fixture("export_work") / "scenes" / "1-1.md")

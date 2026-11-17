@@ -342,6 +342,8 @@
 - `docs/DESIGN.md` — 上位仕様 (工程・語彙・受入条件)
 - `AGENTS.md` — ワークスペース規範 (面白さの4条件・検査の3層)
 - `templates/interest-scorecard.md` — §10 の記録用紙
+- `templates/writing-contract.md` — §4/§5 の設計を書く契約の雛形
+- `templates/scene.md` — 本文ヘッダ (`polished` フラグ)
 - `templates/craft-engine.md` / `templates/craft-voice.md` — §1/§5 の設計先
 - `.agents/skills/spark/SKILL.md` — §1/§2 の実践
 - `.agents/skills/scene-craft/SKILL.md` — §4/§5/§6/§7 の実践

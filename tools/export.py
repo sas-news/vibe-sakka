@@ -16,7 +16,9 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import re
+import shutil
 import sys
 import uuid
 import zipfile
@@ -356,6 +358,12 @@ def safe_filename(title: str) -> str:
     return name or "manuscript"
 
 
+def remove_tree(path: Path) -> None:
+    """作業ディレクトリを丸ごと消す (staging の後始末)。"""
+    if path.is_dir():
+        shutil.rmtree(path, ignore_errors=True)
+
+
 def write_report(workdir: Path, report_text: str) -> Path:
     build = workdir / "build"
     build.mkdir(parents=True, exist_ok=True)
@@ -426,7 +434,9 @@ def _resolve_refs(workdir: Path, order: str | None) -> tuple[list[SceneRef], Pla
         raise PlanError(
             "plan/tree.md から公開順を解析できません。"
             "`--order 1-1,1-2,2-1` の形で公開順を指定してください "
-            "(推測で並べません)"
+            "(推測で並べません)。"
+            "v1 の `scenes/N.md` (1話1シーン) は --order でも解決しません。"
+            "docs/MIGRATION.md §8.4 に従い `scenes/N-1.md` にリネームしてください"
         )
     check_contiguous(plan.scenes)
     return plan.scenes, plan
@@ -485,30 +495,53 @@ def run(args: argparse.Namespace) -> int:
             return 1
 
     out_dir = workdir / "out"
-    out_dir.mkdir(parents=True, exist_ok=True)
     base = safe_filename(title)
+    staging = workdir / "build" / "staging"
+
+    # --release は build/staging/ に生成し、ゲート合格後にだけ out/ へ移す。
+    # 失敗時は out/ を一切変更しない (公開済みの原稿を壊さない)。
+    target_dir = staging if args.release else out_dir
+    if args.release:
+        remove_tree(staging)
+        target_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        target_dir.mkdir(parents=True, exist_ok=True)
     outputs: list[Path] = []
-    paths = {
-        "md": out_dir / f"{base}.md",
-        "txt": out_dir / f"{base}.txt",
-        "epub": out_dir / f"{base}.epub",
+    staged_paths = {
+        "md": target_dir / f"{base}.md",
+        "txt": target_dir / f"{base}.txt",
+        "epub": target_dir / f"{base}.epub",
     }
-    paths["md"].write_text(content, encoding="utf-8")
-    outputs.append(paths["md"])
+    staged_paths["md"].write_text(content, encoding="utf-8")
+    outputs.append(staged_paths["md"])
     if args.txt:
-        paths["txt"].write_text(to_plain_text(content), encoding="utf-8")
-        outputs.append(paths["txt"])
+        staged_paths["txt"].write_text(to_plain_text(content), encoding="utf-8")
+        outputs.append(staged_paths["txt"])
     if args.epub:
-        paths["epub"].write_bytes(build_epub(title, content))
-        outputs.append(paths["epub"])
+        staged_paths["epub"].write_bytes(build_epub(title, content))
+        outputs.append(staged_paths["epub"])
 
     gate_result = None
     gate_ok = True
     if args.release:
         gate_result = release_gate.check(
             workdir, legacy=args.legacy,
-            extra_out_names={path.name for path in outputs})
+            extra_out_names={path.name for path in outputs},
+            extra_manuscripts=[path for path in outputs
+                               if path.suffix.lower() in (".md", ".txt")],
+            write_report_file=not args.no_report)
         gate_ok = gate_result.ok
+        final_outputs: list[Path] = []
+        if gate_ok:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            for path in outputs:
+                destination = out_dir / path.name
+                os.replace(path, destination)
+                final_outputs.append(destination)
+            remove_tree(staging)
+        else:
+            remove_tree(staging)
+        outputs = final_outputs
 
     report = _format_report(title, workdir, refs, structure, chars, lint_report,
                             outputs, gate_result, args.no_lint)
@@ -572,6 +605,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--release", action="store_true",
                         help="release_gate.py の検査も通す")
     parser.add_argument("--no-lint", action="store_true", help="lint をスキップする")
+    parser.add_argument("--no-report", action="store_true",
+                        help="--release 時に release_gate のレポートを書かない "
+                             "(CI 用)")
     parser.add_argument("--legacy", action="store_true", help="v1 作品の互換モード")
     parser.add_argument("--json", action="store_true", help="結果を JSON で出す")
     return parser

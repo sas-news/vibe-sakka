@@ -157,7 +157,6 @@ examples/
 work.md                ++ 面白さの設計 (約束/フック/快楽/感情の弧/禁じ手/声)
 craft/engine.md        物語エンジン (欲求・欠落・対立・代償・時計・約束)
 craft/voice.md         文体の声 (サンプル段落・禁止語彙・リズム)
-craft/scorecard.md     章ごとの興味スコアカード記録 (任意)
 plan/tree.md           各話に hook/promise/detonator/payoff 必須
 build/                 作業生成物 (lint/export レポート・epub 中間) — 公開しない
 out/                   公開物のみ (manuscript.md/.txt/.epub)
@@ -201,7 +200,9 @@ python3 tools/manuscript_lint.py [--json] [--fix] [--workdir DIR] [--legacy]
 - 入力は原稿 Markdown (export 済み、または scenes/*.md を連結したもの)。
 - `--workdir` 指定時は `out/` の原稿と `scenes/` の本文を比較し、**stale export
   (原稿がシーンより古い/不一致)** を検出する。
-- `--legacy` は v1 作品の互換 (craft 必須項目の欠落を error にしない)。
+- `--legacy` は v1 形式の互換 (面白さの設計・craft/・polished フラグ・
+plan 解析の欠落を warn にする)。**polish/beta 記録・out/ 清浄・lint E は
+gate と同じく error** (v1 の「推敲なしで公開」を再発させない)。
 - `--fix` は安全な自動修正のみ: BOM/CRLF 統一、行末空白、3連以上の空行、
   重複した区切り線、末尾の重複 `(了)`、全角/半角の区切り統一。**本文の語句は
   書き換えない。**
@@ -221,7 +222,7 @@ python3 tools/manuscript_lint.py [--json] [--fix] [--workdir DIR] [--legacy]
 | E L003 | ビート見出し・番号行: `^[一二三四五六七八九十百]+$` 単独行、`【…】` 単独行、`^#+ ` (本文中の見出し)、`（第N話・了）` 等の制作メモ |
 | E L004 | 重複ブロック: 15字以上の同一行が2回以上 / 同一章内の同一文の重複 |
 | E L005 | 話見出しの順序異常 (欠番・重複・逆行) |
-| E L006 | プレースホルダ: `[※未執筆]` `TODO` `FIXME` `XXX` `要確認` `未定` `<<` `{{` `（※` |
+| E L006 | プレースホルダ: `[※未執筆]` `TODO` `FIXME` `XXX` `要確認` `<<` `{{` `（※`。`未定` は行全体・`（未定）`・`[未定]`・`〜: 未定` のようなプレースホルダ文脈のみ (通常文の「未定」は対象外) |
 | E L007 | stale export (`--workdir`) |
 | E L008 | エンコーディング異常 (BOM/CRLF混在/デコード不能) |
 | E L009 | 末尾・章末の重複 `(了)` / `（了）` |
@@ -261,35 +262,50 @@ python3 tools/export.py [--workdir .] [--order 1-1,1-2,...]
   `--order` を促す (推測で並べない)。
 - 各 `scenes/E-S.md` の本文だけを連結する (YAML ヘッダ・タイトル行・
   `---` 区切りは落とす)。話見出しは `## 第N話 タイトル` を挿入。
-- 結合時に整形をしない (本文は変えない)。区切りは既存本文に任せる。
-  ただし `--separator SEP` を指定した場合のみ、同一話内のシーン間に同じ
-  区切り (例 `◆`) を md/txt 共通で挿入する (v1 の md/txt 不統一の再発防止)。
+- 本文の語句は変えない。ただし 3 連以上の空行を 2 連に正規化する
+  (空白のみの整形。詩・実験形式で空行を保つ必要がある場合は、シーン本文の
+  空行を 2 連以下にしてから export する)。
+  区切りは既存本文に任せる。`--separator SEP` を指定した場合のみ、同一話内の
+  シーン間に同じ区切り (例 `◆`) を md/txt 共通で挿入する
+  (v1 の md/txt 不統一の再発防止)。
 - 標準で `out/<title>.md` を書く。`--txt` は Markdown 記号を落とした
   プレーンテキスト (`第N話 タイトル` 行)、`--epub` は標準ライブラリの
   zipfile で最小 EPUB を書く (`out/<title>.epub`)。
 - 実行前に lint を走らせ、E があれば **書かずに失敗** (`--no-lint` で回避可)。
-- `--release` はさらに `release_gate.py` の検査を通し、`out/` に公開物以外が
-  あれば失敗。レポートは `build/export-report.md` に書く。
-- `out/` に書いてよいのは `<title>.md` `.txt` `.epub` のみ。
+- `--release` は `build/staging/` に生成 → `release_gate.py` 合格後にだけ
+  `out/` へ移動する。**ゲート不合格時は `out/` を一切変更しない**。
+  レポートは `build/export-report.md` に書く。
+- `out/` に書いてよいのは `<title>.md` `.txt` `.epub` のみ (タイトルと一致する
+  ファイル名。旧タイトルや別名の公開物が残っている場合は error)。
 
 ### 5.3 `tools/release_gate.py`
 
 ```
-python3 tools/release_gate.py [--workdir .] [--legacy] [--json]
+python3 tools/release_gate.py [--workdir .] [--legacy] [--json] [--no-report]
 ```
 
 検査項目 (1つでも error なら exit 1):
 
-- `work.md`: status active / 憲章の「面白さの設計」「禁じ手」「声」が空でない
+- `work.md`: status active / 「面白さの設計」の必須7項目 (約束・冒頭のフック・
+  ジャンルの快楽・感情の弧・禁じ手・声・面白さの基準) が実文で埋まっている
+  (blockquote・プレースホルダ・記入例は値と数えない。legacy では warn)。
+- `craft/engine.md` `craft/voice.md` が存在し、必須見出しに実文がある
   (legacy では warn)。
-- `craft/engine.md` `craft/voice.md` が存在 (legacy では warn)。
 - 計画上の全シーンに `contracts/E-S.md` が存在し status approved。
 - `scenes/E-S.md` が存在し `polished: true` (legacy では warn)。
-- `foreshadowing.md` の回収予定超過 (planted のまま期限を過ぎたもの) がない。
-- `reviews/` に推敲記録 (`polish-*.md`) が1件以上。
-- `out/` の内容が公開物のみ (md/txt/epub 以外が混ざれば error)。
-- `manuscript_lint.py` を実行して E 0 件。
-- レポートを `reviews/release-<YYYYMMDD>.md` に書く (上書き可)。
+- `foreshadowing.md` の回収期限 (`期限: YYYY-MM-DD`) 超過がない。期限未設定の
+  planted は warn。
+- `reviews/polish-*.md` が1件以上あり、**中身** (before/after 字数または
+  cut_rate) がある。空ファイルは不可 (legacy でも error)。
+- `reviews/beta-*.md` が1件以上あり、`context: external` と
+  `interest_gate: pass` を含む。スコアカードの記録を必須とする
+  (legacy でも error。v1 の「外部テストなしで出荷」を防ぐ中核)。
+- `out/` の内容が `<title>.md/.txt/.epub` のみ (それ以外は error)。
+- `manuscript_lint.py` を実行して E 0 件。対象は `out/*.md` / `out/*.txt` /
+  `scenes/*.md` (ソースのアーティファクトも見逃さない)。
+- レポートを `reviews/release-<YYYYMMDD>.md` に書く (自動生成。手動チェックは
+  `reviews/release-checklist-<YYYYMMDD>.md` に分離する)。`--no-report` で
+  書き込みを抑止できる (CI/読み取り検査用)。
 
 ### 5.4 `tools/init_work.py`
 
@@ -313,8 +329,11 @@ python3 tools/init_work.py <target-dir> --title "..." [--mode short|serial] [--f
 
 ### 5.6 既知の限界 (v2.0.0)
 
-- `manuscript_lint.py` は 1 ファイル (約950行)。22 検査 + stale + `--fix` + CLI を
+- `manuscript_lint.py` は 1 ファイル (約1,000行)。22 検査 + stale + `--fix` + CLI を
   持つため。機能追加時はモジュール分割してよい (I/F は不変)。
+- `release_gate.py` は自動レポート (`reviews/release-<date>.md`) を書く。
+  手動チェックリストは `reviews/release-checklist-<date>.md` に分離し、
+  ゲートは上書きしない。
 - lint の `--legacy` は現状 no-op。v1 互換の緩和は `release_gate.py` 側で行う。
 - `export.py` は `scenes/<E-S>.md` を前提とする。v1 の `scenes/<N>.md`
   (1話1ファイル) は `--order` でも解決しないため、`<N>-1.md` にリネームする
@@ -322,6 +341,9 @@ python3 tools/init_work.py <target-dir> --title "..." [--mode short|serial] [--f
 - EPUB は最小 EPUB3 (表紙・画像・CSS なし)。
 - `examples/before-after.md` は規範の説明用で、v1 引用部に意図的に E を残す。
   lint 0 の実例は `examples/sample-work/`。
+- EPUB の `dcterms:modified` は生成日時を使うため、同じ入力でも日付が変わると
+  バイト列が変わる (内容の決定性は保たれる)。完全再現が必要なら `--date` を
+  将来追加する。
 
 ---
 
@@ -452,7 +474,8 @@ frontmatter (`name`, `description`) は v1 と同じ形式。本文は日本語�
 7. AGENTS.md から全スキル・tools・docs へ到達できる。
 8. v1 作品を壊さない: `--legacy` で lint/gate が動く。
 9. 実作品 (ato-de-yomu) に新 export/lint を適用し、`(了)` 重複などの
-   アーティファクトが消えた原稿を生成できる (Lead が統合時に実施)。
+   アーティファクトが消えた原稿を生成できる (v2.0.0 で実施済み。
+   `docs/VERIFICATION.md` §8 に実測値)。
 10. 独立レビュー (別コンテキスト) で重大な矛盾・リンク切れ・未実装がない。
 
 ---
@@ -461,7 +484,7 @@ frontmatter (`name`, `description`) は v1 と同じ形式。本文は日本語�
 
 | 担当 | 書いてよいファイル |
 | --- | --- |
-| Lead | AGENTS.md, README.md, CHANGELOG.md, .gitignore, docs/DESIGN.md, docs/DIAGNOSIS.md, docs/PHILOSOPHY.md, docs/MIGRATION.md, 統合修正 |
+| Lead | AGENTS.md, README.md, CHANGELOG.md, .gitignore, docs/DESIGN.md, docs/DIAGNOSIS.md, docs/PHILOSOPHY.md, docs/MIGRATION.md, docs/VERIFICATION.md, 統合修正 |
 | craft-author | `.agents/skills/{spark,scene-craft,polish,release-gate}/SKILL.md`, `docs/CRAFT.md`, `templates/{craft-engine,craft-voice,interest-scorecard,polish-report,release-checklist}.md`, `examples/**` |
 | process-rewriter | `.agents/skills/{orchestrator-dialogue,init-work,plan-work,write-scene,beta-read,export,research,change-set,review-change,autonomy}/SKILL.md`, `templates/{work,writing-contract,scene,beta-review,research-note}.md` |
 | tools-engineer | `tools/**`, `.github/workflows/kit-ci.yml` |
