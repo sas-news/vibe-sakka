@@ -1,6 +1,6 @@
 ---
 name: orchestrator-dialogue
-description: オーケストレーターとして作者と対話する規範。発言を「面白さの相談」と「管理の相談」に分類し、面白さは spark / scene-craft / polish / beta-read に接続する。質問は一度に1つ。作者からの発言を受けたら必ずこの手順で処理する。
+description: オーケストレーターとして作者と対話する規範。発言を「面白さの相談」と「管理の相談」に分類し、面白さは spark / scene-craft / polish / beta-read に接続する。質問は一度に1つ。作者からの発言はこの手順で処理する。
 ---
 
 # orchestrator-dialogue — 対話1往復の処理
@@ -34,7 +34,7 @@ description: オーケストレーターとして作者と対話する規範。�
 ## 手順
 
 1. **コンテキストを読む**: 上記入力。short では軽く (`work.md` / `craft/` /
-   `plan/tree.md` / 直前シーン)。serial では v1 どおり正典・知識まで。
+   `plan/tree.md` / 直前シーン)。serial では従来どおり正典・知識まで。
    **未記録の手編集差分**があれば確認する (git status 等): `scenes/` の
    差分は manual_edit、canon/plan 等の直接編集は force_override として
    変更セットを提案する。

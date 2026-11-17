@@ -5,16 +5,14 @@ description: 公開前チェック。manuscript_lint / release_gate / export --r
 
 # release-gate — 公開前ゲート
 
-v1 は「禁止事項 OK / 秘密 OK」だけで出荷可とし、`out/` に企画書・調査・
-スクリプトが混ざり、`(了)` が二重のまま公開された。release-gate は
-**決定的検査で落とせるものは全部落とし、意味判断は記録で確認する**工程である。
-ゲートを通らない原稿を `out/` に出さない。
+release-gate は**決定的検査で落とせるものは落とし、意味判断は記録で確認する**
+工程である。ゲートを通らない原稿を `out/` に出さない。
 
 ## いつ使うか
 
 - `polish` の後、`out/` に公開物を書く直前。
 - `export` で原稿を書き出す時 (export 自体も内部で lint を走らせる)。
-- 「公開していい?」と聞かれた時は、必ずこの手順を実行してから答える。
+- 「公開していい?」と聞かれた時は、この手順で確認してから答える。
 
 ## 入力
 
@@ -58,7 +56,7 @@ python3 tools/manuscript_lint.py --json --workdir . out/*.md
   txt と md/scenes の一致 (stale) は `release_gate.py` と
   `export.py --release` が最終確認する。`manuscript_lint.py --workdir` は
   md 用 (txt に付けると本文の見出し差を stale と誤検出する)。
-  md だけ直して txt が古いまま、という v1 の失敗はゲートで落とす。
+  md と txt の不一致はゲートで落ちる。
 - `--fix` は **source (`scenes/*.md`) に掛ける**。out/ に掛けても次の export で
   戻るうえ、scenes の E は消えない (`.agents/skills/polish/SKILL.md`)。
 
@@ -145,7 +143,7 @@ python3 tools/export.py --workdir . --release --md --txt
 ```text
 公開ゲートで2件止まりました。公開はまだできません。
 
-1) out/ に企画書 (browser-wars_企画書_v2.md) が残っています
+1) out/ に企画書 (plan/ に移すべき資料) が残っています
    → (A) build/ へ移す (B) 削除する (C) 公開物として別名で残す
 2) 第3話にビート見出し (「一」「二」) が3箇所あります
    → (A) 場面化して書き直す (推奨・30分) (B) 見出しだけ削る (内容は要約のまま)
@@ -177,7 +175,7 @@ python3 tools/export.py --workdir . --release --md --txt
 
 - **gate を飛ばして公開**: exit 1 を無視する。公開物の信頼を一度で失う。
 - **`--no-lint` / `--legacy` の常用**: 検査を飛ばすためのフラグを通常運用で
-  使わない。`--legacy` は v1 作品の移行時のみ。
+  使わない。`--legacy` は旧形式の作品の移行時のみ。
 - **out/ に作業物を置く**: 企画書・調査・スクリプト・下書きを out/ に置かない。
 - **整合性だけで「面白い」と報告**: gate 合格は「破綻していない」であって
   「面白い」ではない。面白さは `beta-read` のスコアカードで判定する。

@@ -1,14 +1,14 @@
 ---
 name: export
-description: 生成済みシーンを計画順に連結して読める原稿を書き出す。python3 tools/export.py 経由を必須とし、手作業連結を禁止する。out/ は公開物のみ、build/ は作業物。--release は release_gate を通す。「原稿を出して」「連結して」「投稿用に出力して」で使う。
+description: 生成済みシーンを計画順に連結して読める原稿を書き出す。python3 tools/export.py を使い、手作業で連結しない。out/ は公開物のみ、build/ は作業物。--release は release_gate を通す。「原稿を出して」「連結して」「投稿用に出力して」で使う。
 ---
 
 # export — 原稿の書き出し
 
-`scenes/` に散った本文を読める形にまとめる。**結合のみ — 本文は一字一句
-変えない** (直したい箇所は `.agents/skills/change-set` か `polish` 経由)。
-**手作業での連結 (cat・コピペ) は禁止。** 順序・話見出し・YAML 除去・lint を
-`python3 tools/export.py` に一元化する。
+`scenes/` に散った本文を読める形にまとめる。**本文の語句は変えない**
+(直したい箇所は `.agents/skills/change-set` か `polish` 経由)。
+**手作業での連結 (cat・コピペ) はしない。** 順序・話見出し・YAML 除去・lint は
+`python3 tools/export.py` に任せる。
 
 ## いつ使うか
 
@@ -38,7 +38,7 @@ description: 生成済みシーンを計画順に連結して読める原稿を�
    - 話見出し `## 第N話 タイトル` の挿入・YAML ヘッダ除去・`---` 区切りの
      処理はツールが行う。手で整えない。
    - シーン間に区切り (`◆` 等) を入れたい場合は `--separator "◆"` を付ける。
-     md/txt で同じ区切りになる (v1 は md=◆ / txt=◇ で不一致だった)。
+     md/txt で同じ区切りになる。
 3. **公開版を確定する**:
    `python3 tools/export.py --workdir . --release`
    - `--release` は `tools/release_gate.py` の検査を通し、`out/` に公開物
