@@ -7,8 +7,11 @@
                                   [--no-report] [--today YYYY-MM-DD]
 
 検査項目: work.md の status と面白さの設計 (7項目) / craft/ / 契約 approved /
-scenes の polished: true / beta 記録 (external・interest_gate: pass) /
+scenes の polished: true / beta 記録 (external・スコア記載) /
 推敲記録の中身 / 伏線の回収期限 / out/ 清浄 / out+scenes の lint E 0。
+
+beta の合否 (`interest_gate: fail` / high 1 or medium 3 超え) は warning に
+とどめる (趣味判断で公開を止めない。作者が決める)。
 
 --legacy は **v1 形式の互換のみ** を緩和する (設計7項目・craft・polished・
 plan 表形式の欠落を warn)。polish/beta 記録・out/ 清浄・lint E は legacy でも
@@ -44,6 +47,12 @@ ENGINE_ITEMS = ("約束", "欲求", "対立", "代償", "時計", "快楽", "禁
 #: beta 記録 (外部読者テスト) の必須マーカー。
 EXTERNAL_RE = re.compile(r"(?mi)^\s*(?:reader|context)\s*:\s*external\b")
 GATE_PASS_RE = re.compile(r"(?mi)^\s*interest_gate\s*:\s*pass\b")
+INTEREST_FAIL_RE = re.compile(r"(?mi)^\s*interest_gate\s*:\s*fail\b")
+INTEREST_PENDING_RE = re.compile(r"(?mi)^\s*interest_gate\s*:\s*pending\b")
+#: スコアカードの採点行 (| 1 | 観点 | 3 | 根拠 |)。
+SCORE_ROW_RE = re.compile(r"(?m)^\|\s*(?:[0-9]+|合計)\s*\|[^\n]*\|\s*(?:[0-4]|[0-9]+\s*/\s*40)\s*\|")
+HIGH_COUNT_RE = re.compile(r"high\s*[（(:=：]?\s*(\d+)\s*件")
+MEDIUM_COUNT_RE = re.compile(r"medium\s*[（(:=：]?\s*(\d+)\s*件")
 #: 推敲記録の数値。
 BEFORE_RE = re.compile(r"(?mi)^\s*before_chars\s*:\s*(\d+)")
 AFTER_RE = re.compile(r"(?mi)^\s*after_chars\s*:\s*(\d+)")
@@ -368,12 +377,16 @@ def check_plan(result: GateResult) -> None:
 
 
 def check_beta(result: GateResult) -> None:
-    """外部読者テスト (reviews/beta-*.md) の中身検査。"""
+    """外部読者テスト (reviews/beta-*.md) の検査。
+
+    未実施 (記録なし・external でない・スコア未記入) は error で止める。
+    合否 (`interest_gate: fail` / high 1 or medium 3 超え) は **warning** に
+    とどめ、公開可否は作者判断に委ねる (機械が止めるのは衛生と未実施だけ)。
+    """
     reviews = result.workdir / "reviews"
     records = sorted(reviews.glob("beta-*.md")) if reviews.is_dir() else []
     errors_before = len(result.errors)
     if not records:
-        # 外部読者テストの欠落は v1 でも公開不可 (v1 の失敗の再発防止)
         result.error("beta", "reviews/beta-*.md がありません "
                              "(外部読者テストの記録が必須。v1 でも error)")
         return
@@ -385,11 +398,32 @@ def check_beta(result: GateResult) -> None:
         if not EXTERNAL_RE.search(text):
             result.error("beta", f"{path.name} に external の記録がありません "
                                  "(`reader: external` / `context: external`)")
-        if not GATE_PASS_RE.search(text):
-            result.error("beta", f"{path.name} が interest_gate: pass ではありません "
-                                 "(high 1 or medium 3 で不合格)")
+            continue
+        if not SCORE_ROW_RE.search(text):
+            result.error("beta", f"{path.name} にスコアの記載がありません "
+                                 "(interest-scorecard の採点行を記録する)")
+            continue
+        high = HIGH_COUNT_RE.search(text)
+        medium = MEDIUM_COUNT_RE.search(text)
+        high_count = int(high.group(1)) if high else 0
+        medium_count = int(medium.group(1)) if medium else 0
+        threshold_over = high_count >= 1 or medium_count >= 3
+        if INTEREST_FAIL_RE.search(text):
+            result.warn("beta", f"{path.name}: interest: fail "
+                                 "(作者判断で公開可。推敲・改稿の材料にする)")
+        elif threshold_over:
+            result.warn("beta", f"{path.name}: interest: high {high_count} / "
+                                 f"medium {medium_count} が閾値超え "
+                                 "(作者判断で公開可。推敲・改稿の材料にする)")
+        elif INTEREST_PENDING_RE.search(text):
+            result.warn("beta", f"{path.name}: interest_gate が未判定 (pending) "
+                                 "(作者判断で公開可)")
+        elif not GATE_PASS_RE.search(text):
+            result.warn("beta", f"{path.name}: interest_gate の記載がありません "
+                                 "(作者判断で公開可)")
     if len(result.errors) == errors_before:
-        result.allow("beta", f"beta 記録 {len(records)} 件")
+        result.allow("beta", f"beta 記録 {len(records)} 件 "
+                             "(合否は警告扱い・作者判断)")
 
 
 def check_foreshadowing(result: GateResult, today: date) -> None:

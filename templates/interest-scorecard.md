@@ -2,7 +2,8 @@
 
 > 外部読者 (正典・計画を知らない新規コンテキスト) が原稿を読み、10観点を
 > 0–4で採点する用紙。**同一コンテキストの自己採点はテストとして無効。**
-> 合否は high 1件以上 or medium 3件以上 → 不合格 (revise 最大2回)。
+> high 1件以上 or medium 3件以上は **改稿を検討する目安** (revise 最大2回)。
+> 公開可否は作者が決める。
 > 採点基準の詳細は `docs/CRAFT.md` §10。
 >
 > **記録先**: `reviews/beta-<対象>-<date>.md` の「興味スコアカード」節に
@@ -42,13 +43,14 @@ scenes_reviewed: 2
 ## severity 換算と合否
 
 - 0–1点 = high / 2点 = medium / 3–4点 = 問題なし。
-- **high 1件以上、または medium 3件以上で不合格。** 平均点は見ない。
-- 合格 = high 0 かつ medium 2以下 (目安)。`work.md` で閾値を変更できるが、
-  変更した場合は `work.md` に理由を書く。
+- **high 1件以上、または medium 3件以上は改稿の目安。** 平均点は見ない。
+- 目安 = high 0 かつ medium 2以下。`work.md` で閾値を変更できる。
+- 合否は作者判断。機械 (release-gate) は beta 未実施を止めるが、fail でも
+  公開を止めない。
 
 記入例:
 ```text
-high: 1件 (具体物の記憶=0) / medium: 2件 → 不合格。§6で具体物を3つ入れて revise。
+high: 1件 (具体物の記憶=0) / medium: 2件 → 改稿を検討。§6で具体物を3つ入れて revise。
 ```
 
 ## 自由記述 (読者の言葉のまま)
@@ -64,9 +66,9 @@ high: 1件 (具体物の記憶=0) / medium: 2件 → 不合格。§6で具体物
 
 ## 判定
 
-- interest gate: 不合格 / 合格
+- interest gate: pass / fail (fail は改稿の材料。公開可否は作者判断)
 - 次の行動: `revise` (最大2回) / `polish` に回す / 作者に報告
 - 記録: `reviews/beta-<対象>-<date>.md` に貼り、`plan/tree.md` の該当話に
   `interest: pass|fail` を記す。
 
-記入例: 「不合格 → write-scene で revise 1回目 (具体物3つ追加) → 再採点で合格。」
+記入例: 「fail → write-scene で revise 1回目 (具体物3つ追加) → 再採点で pass。」

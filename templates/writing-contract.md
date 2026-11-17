@@ -40,9 +40,8 @@ scene_type: real       # real | dream | memory | hypothetical | other
 
 ## craft 欄 (面白さの設計)
 
-> 本文生成の入力。`scene_job` / `dramatic_question` / `want` / `obstacle` /
-> `turn` / `cost` が空のまま approved にしない。空なら
-> `.agents/skills/scene-craft/SKILL.md` に戻って設計する。
+> 本文生成の入力。`scene_job` / `want` / `turn` が決まっていれば書き始めて
+> よい。他の欄は書く前でも書きながらでもよく、空欄は未決定として残す。
 > 記入例: `turn: ソラは「開く」を自慢するつもりで来て、自分が最後の一人だと知る。`
 
 - **scene_job** — この場面が物語で果たす仕事 (1文):

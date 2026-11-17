@@ -11,15 +11,15 @@
 python3 tools/selftest.py
 ```
 
-期待: `Ran 78 tests ... OK` / exit 0。
+期待: `Ran 86 tests ... OK` / exit 0。
 
 内訳:
 
 | テスト | 件数 | 内容 |
 | --- | --- | --- |
-| test_lint | 26 | E L001–L012 / W の検出、`--fix`、stale、`--json`、L004 章スコープ、L006 文脈 |
+| test_lint | 32 | E L001–L012 / W の検出、`--fix`、stale、`--json`、L004 近接/モチーフ、L006 文脈、W003/W007 |
 | test_export | 23 | plan 解析、`--order`、YAML 除去、見出し、md/txt/epub、`--separator`、staging、lint で書かない |
-| test_release_gate | 22 | v2 合格/不合格、v1 (`--legacy`) の互換、beta/polish 内容、設計7項目、伏線期限、out/ 汚染 |
+| test_release_gate | 24 | v2 合格/不合格、v1 (`--legacy`) の互換、beta/polish 内容、interest 警告、設計7項目、伏線期限、out/ 汚染 |
 | test_init_work | 7 | 骨格生成、`--force`、上書きしない、mode |
 
 ## 2. 見本作品 (v2 で作った最小作品)
@@ -29,14 +29,14 @@ python3 tools/manuscript_lint.py --workdir examples/sample-work examples/sample-
 # 期待: E 0 / W 4 / exit 0 (W は出荷可の推敲対象)
 
 python3 tools/release_gate.py --workdir examples/sample-work
-# 期待: 合格 (gate E 0 / W 0, lint E 0 / W 12) / exit 0
+# 期待: 合格 (gate E 0 / W 0, lint E 0 / W 11) / exit 0
 
 python3 tools/export.py --workdir examples/sample-work --release --md --txt --no-report
 # 期待: exit 0。staging 経由で out/ に md/txt のみ
 ```
 
 ゲートは `out/*.md` / `out/*.txt` / `scenes/*.md` のすべてを lint し、
-`reviews/beta-*.md` (external + interest_gate: pass) と
+`reviews/beta-*.md` (external + スコア記録。fail は警告で公開可) と
 `reviews/polish-*.md` (before/after または cut_rate) の**中身**も検査する。
 
 ## 3. v1 作品の検査 (legacy)
@@ -105,11 +105,31 @@ lint 0 の実例は `examples/sample-work/` を参照。
 
 | 検証 | 結果 |
 | --- | --- |
-| `tools/selftest.py` | 78 tests / OK |
+| `tools/selftest.py` | 86 tests / OK |
 | sample-work lint (md) | E 0 / W 4 / exit 0 |
-| sample-work gate | 合格 (gate E 0 / W 0, lint E 0 / W 12) |
+| sample-work gate | 合格 (gate E 0 / W 0, lint E 0 / W 11) |
 | sample-work export --release | exit 0 (staging → out) |
 | v1 原稿 (ato-de-yomu) lint | E 0 / W 20 / exit 0 (修復済み) |
 | v1 原稿 (ato-de-yomu) gate --legacy | 不合格 E 2 (beta/polish なし。正しい判定) |
 | v1 要約体 (browser-wars 全12話) | E 60 (L003 ビート見出し等) / exit 1 |
 | 監査の再現ケース | txt URL・scenes の L009・beta なし・空 polish・空の設計・期限誤読・未定誤爆・章またぎ重複 をすべて適切に判定 |
+| 執筆テスト (フル工程) | 1,574字 / lint E 0・W 0 / gate 合格 (interest fail は警告) |
+| 執筆テスト (盲検読者) | 22/40。具体物の強さと、既視感・説明過多・受動的主人公の指摘 |
+
+## 9. 執筆テスト (2026-11-17)
+
+サブエージェント2本で実施した実運用テスト。
+
+- **フル工程** (1,574字、1話2シーン): lint E0/W0。release gate は
+  **interest fail の警告のみで合格** (作者判断で公開可)。`export --release` は
+  staging 経由で out/ を更新。
+- **盲検読者** (設定・計画を知らない別エージェント): 22/40。
+  長所は「忘却を延滞・判・帳簿という事務手続きに翻訳した発明」、
+  批判は「装置に既視感」「仕掛けを台詞で説明」「主人公が受身」「忘却の瞬間が
+  演じられない」。
+- **短文** (841字): 自由に書けた度 4/5。摩擦は創造性の原則ではなく、
+  契約 approved の前提・12項目検査・記録の負担・例の傘への誘導・
+  button の型だった → 試作モード、検査の絞り込み、契約3項目、例の注記、
+  button の拡張で対処。
+- テスト中に判明したツールの実害 (interest fail で公開停止 / L004 がモチーフ
+  反復を E / W003 独白 / W007 見出し誤爆) を修正し、回帰テストを追加した。

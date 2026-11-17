@@ -337,9 +337,13 @@ def _undecided_placeholder(stripped: str) -> bool:
     return bool(L006_UNDECIDED_VALUE_RE.search(stripped))
 
 
+PLAIN_CHAPTER_RE = re.compile(rf"^第[{DIGITS}]+話(?:\s|$)")
+
+
 def _is_heading(text: str) -> bool:
     stripped = text.strip()
     return bool(CHAPTER_RE.match(stripped) or CHAPTER_ALLOW_RE.match(stripped)
+                or PLAIN_CHAPTER_RE.match(stripped)
                 or (TITLE_LINE_RE.match(stripped) and stripped.startswith("# ")))
 
 
@@ -402,20 +406,32 @@ def _check_duplicates(report: Report, body: list[tuple[int, str]],
                 return number
         return 0
 
+    # 近接 (この行数以内) の完全一致はコピペ痕跡として E。
+    # 離れた反復はモチーフ・refrain として W にとどめる。
+    proximity = 3
     seen_line: dict[str, tuple[int, int]] = {}
     seen_sentence: dict[str, tuple[int, int]] = {}
+
+    def report_duplicate(kind: str, label: str, lineno: int,
+                         first_line: int, first_chapter: int,
+                         chapter_no: int) -> None:
+        near = first_chapter == chapter_no and lineno - first_line <= proximity
+        if near:
+            report.error("L004", "duplicate", name, lineno,
+                         f"{kind}が近接して重複しています (初出 {first_line} 行目)")
+        else:
+            report.warn("L004", "duplicate", name, lineno,
+                        f"{kind}が離れて反復しています (初出 {first_line} 行目) "
+                        "— 意図的なモチーフなら可")
+
     for index, (lineno, text) in enumerate(body):
         chapter_no = chapter_of(index)
         key = text.strip()
         if len(key) >= 15 and not SEP_LINE_RE.match(key):
             if key in seen_line:
                 first_line, first_chapter = seen_line[key]
-                if first_chapter == chapter_no:
-                    report.error("L004", "duplicate", name, lineno,
-                                 f"同一行が重複しています (初出 {first_line} 行目)")
-                else:
-                    report.warn("L004", "duplicate", name, lineno,
-                                f"同一行が章をまたいで反復しています (初出 {first_line} 行目)")
+                report_duplicate("同一行", "", lineno, first_line,
+                                 first_chapter, chapter_no)
             else:
                 seen_line[key] = (lineno, chapter_no)
         for sentence in SENTENCE_SPLIT_RE.split(text):
@@ -424,14 +440,8 @@ def _check_duplicates(report: Report, body: list[tuple[int, str]],
                 continue
             if sentence in seen_sentence:
                 first_line, first_chapter = seen_sentence[sentence]
-                if first_chapter == chapter_no:
-                    report.error("L004", "duplicate", name, lineno,
-                                 f"同一文が重複しています (初出 {first_line} 行目): "
-                                 f"「{sentence[:30]}…」")
-                else:
-                    report.warn("L004", "duplicate", name, lineno,
-                                f"同一文が章をまたいで反復しています "
-                                f"(初出 {first_line} 行目): 「{sentence[:30]}…」")
+                report_duplicate(f"同一文「{sentence[:24]}…」", "", lineno,
+                                 first_line, first_chapter, chapter_no)
             else:
                 seen_sentence[sentence] = (lineno, chapter_no)
 
@@ -550,15 +560,23 @@ def _check_density(report: Report, body: list[tuple[int, str]], name: str,
 
 
 def _check_dialogue(report: Report, body: list[tuple[int, str]], name: str) -> int:
-    """W003: 台詞比率。合計台詞文字数を返す。"""
+    """W003: 台詞比率 (<5% or >90% で警告。2000字未満は info のみ)。
+
+    独白・地の文中心の場面を止めないため閾値は緩め。短い場面は
+    比率が暴れやすいので info に落とす。
+    """
     full_text = "\n".join(text for _, text in body)
     chars = content_chars(full_text)
     dialogue = dialogue_chars(full_text)
     ratio = _ratio(dialogue, chars)
-    if chars >= 200 and (ratio < 0.10 or ratio > 0.70):
-        side = "10% 未満" if ratio < 0.10 else "70% 超"
-        report.warn("W003", "dialogue", name, body[0][0] if body else 1,
-                    f"台詞比率 {ratio:.1%} ({side})")
+    if chars >= 200 and (ratio < 0.05 or ratio > 0.90):
+        side = "5% 未満" if ratio < 0.05 else "90% 超"
+        message = f"台詞比率 {ratio:.1%} ({side})"
+        if chars >= 2000:
+            report.warn("W003", "dialogue", name, body[0][0] if body else 1, message)
+        else:
+            report.info("W003", "dialogue", name, body[0][0] if body else 1,
+                        message + " — 2000字未満のため info")
     return dialogue
 
 

@@ -38,6 +38,25 @@ python3 tools/release_gate.py --workdir ~/works/灯の話
 キットの外に作品を置く場合も、`--workdir` に作品ディレクトリを渡せば同じように
 動きます。
 
+### 実行場所の注意
+
+`tools/` はキット側にあります。作品ディレクトリに `tools/` が無い場合は、
+**キットの絶対パス**で実行し `--workdir` に作品を渡してください。
+
+```bash
+# 作品ディレクトリに tools/ がある場合
+cd ~/works/灯の話
+python3 tools/manuscript_lint.py --workdir . out/*.md
+
+# キットから呼ぶ場合 (作品に tools/ が無い)
+python3 /path/to/vibe-sakka/tools/manuscript_lint.py \
+  --workdir ~/works/灯の話 ~/works/灯の話/out/*.md
+python3 /path/to/vibe-sakka/tools/release_gate.py --workdir ~/works/灯の話
+```
+
+`--workdir` を省くとカレントディレクトリを作品とみなすため、キット側から
+呼ぶときは必ず付けます。
+
 ---
 
 ## 1. manuscript_lint.py
@@ -85,7 +104,7 @@ E 1 / W 1 / I 0
 | L001 | URL / Markdown リンク / `出典:` `参照:` `資料:` `引用:` `ソース:` / `research/` 参照 | 不可 |
 | L002 | 台帳メタ混入 (`canon/` `contracts/` `scenes/` `plan/` `proposals/` `changesets/` `work.md`、`p-0001` `cs-0001` `f001` `ent-c01` `ev01` `fs01` `ke01` `rev N`) | 不可 |
 | L003 | ビート見出し (`一` `二` … の単独行)、`【…】` 単独行、本文中の `#` 見出し、`（第N話・了）` 等の制作メモ | 不可 |
-| L004 | 重複ブロック: 15 字以上の同一行が 2 回以上 / **同一章内**の同一文 (章をまたぐ反復は W) | 不可 |
+| L004 | 重複ブロック: 15 字以上の同一行、20 字以上の同一文。**近接 (3 行以内) のコピペのみ E**、離れた反復 (モチーフ・refrain) は W | 不可 |
 | L005 | 話見出しの順序異常 (欠番・重複・逆行) | 不可 |
 | L006 | プレースホルダ (`[※未執筆]` `TODO` `FIXME` `XXX` `要確認` `<<` `{{` `（※`)。「未定」は単独行・`（未定）`・`[未定]`・値が未定 のときだけ (通常文は通す) | 不可 |
 | L007 | stale export (`--workdir` 指定時のみ) | 不可 |
@@ -101,7 +120,7 @@ E 1 / W 1 / I 0
 | --- | --- |
 | W001 | 感情の名指し (悲しい/嬉しい/怖い/寂しい/つらい/美しい/すごい/とても 等) が 3.0 以上 |
 | W002 | 抽象語 (こと/もの/気持ち/感じ) が 8.0 以上 |
-| W003 | 台詞比率が 10% 未満 or 70% 超 |
+| W003 | 台詞比率が 5% 未満 or 90% 超 (2000 字未満の場面は info のみ。独白・地の文中心を止めない) |
 | W004 | 長段落 (600 字超) / 長文 (120 字超) |
 | W005 | 章内の同一 4-gram の反復 (5 回以上、章ごとに上位 2 件) |
 | W006 | glossary 未登録の英字語 (3 文字以上、ファイルごとに最大 8 語) |
@@ -144,7 +163,9 @@ python3 tools/manuscript_lint.py --fix --workdir . out/灯の話.md
 - 意味判断 (退屈・感情の動き・整合性) はしません。`beta-read` / `polish` の担当です。
 - L006 の「未定」はプレースホルダ文脈のみです。地の文の「行き先は未定だった」は通りません。
 - L008 はファイル単位の判定です。混在改行の位置までは示しません。
-- L004 の文重複は「同一文 20 字以上」の完全一致のみです。章をまたぐ同一文は W に落とします (意図的なモチーフを止めないため)。
+- L004 は「同一行 15 字以上 / 同一文 20 字以上」の完全一致のみを見ます。
+  近接 (3 行以内) の重複だけを E にし、離れた反復 (モチーフ・refrain) や
+  章をまたぐ反復は W です (物語上の反復を lint に合わせて分割させない)。
 - 章見出しのない原稿は全体を 1 章として扱います。
 
 ---
@@ -257,7 +278,7 @@ python3 tools/release_gate.py [--workdir .] [--legacy] [--json]
 | --- | --- | --- |
 | `work.md` | `status: active`、面白さの設計の必須7項目 (約束/冒頭のフック/ジャンルの快楽/感情の弧/禁じ手/声/面白さの基準) が個別に実文で埋まっている (テンプレ説明・blockquote・`<…>` は値と数えない) | 空欄は警告 |
 | `craft/` | `craft/engine.md` `craft/voice.md` が存在し空でない。engine は必須要素 (約束/欲求/対立/代償/時計/快楽/禁じ手) に実文があり、テンプレート未記入コピーでない | 欠落は警告 |
-| 外部読者テスト | `reviews/beta-*.md` が 1 件以上あり、`reader:`/`context: external` と `interest_gate: pass` を含む | 同じ (error。v1 でも必須) |
+| 外部読者テスト | `reviews/beta-*.md` が 1 件以上・空でない・`reader:`/`context: external`・スコアカードの採点行がある (未実施は error)。**合否 (`interest_gate: fail` / high 1 or medium 3 超え) は warning** で、公開可否は作者判断 | 同じ (未実施は error。合否は警告) |
 | 契約 | 計画上の全シーンに `contracts/E-S.md` があり `status: approved` | 同じ (error) |
 | 本文 | `scenes/E-S.md` があり `polished: true` | 未推敲は警告 |
 | 伏線 | `foreshadowing.md` の `[planted]` に `期限: YYYY-MM-DD` があり期限を過ぎていない (期限なしは警告。`張設:` の日付は期限と読まない) | 同じ (error/警告) |
