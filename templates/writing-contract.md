@@ -2,6 +2,8 @@
 
 > 本文生成のゲート。ファイル名はシーンID (例: `contracts/1-2.md`)。
 > **status: approved になるまで本文生成を開始しない。**
+> 正典上の境界 (下記「契約内容」) に加え、**面白さの設計 (craft 欄)** を
+> 持つ。craft 欄の埋め方は `.agents/skills/scene-craft/SKILL.md`。
 
 ```yaml
 scene: "1-2"           # シーンID (plan/tree.md と一致)
@@ -35,6 +37,31 @@ scene_type: real       # real | dream | memory | hypothetical | other
 - **connections** — 上位アークとのつながり・前後シーンへの因果的接続:
 - **style** — 文体・視点・テンポなどの表現方針:
 - **fixed_vs_flexible** — どの要素が固定で、どの要素が柔軟か:
+
+## craft 欄 (面白さの設計)
+
+> 本文生成の入力。`scene_job` / `dramatic_question` / `want` / `obstacle` /
+> `turn` / `cost` が空のまま approved にしない。空なら
+> `.agents/skills/scene-craft/SKILL.md` に戻って設計する。
+> 記入例: `turn: ソラは「開く」を自慢するつもりで来て、自分が最後の一人だと知る。`
+
+- **scene_job** — この場面が物語で果たす仕事 (1文):
+- **dramatic_question** — この場面の問い (答えを知りたくなる形):
+- **want** — 視点人物が今この場面で欲しいもの (具体的に):
+- **obstacle** — それを阻むもの (人物・規則・時間・自己):
+- **turn** — 場面で起きる転 (予想→裏切り→納得):
+- **cost** — 転・選択が払う代償 (失うもの):
+- **entry** — 入り方 (遅く入る。直前の説明を削る):
+- **exit** — 出方 (早く出る。余韻を残す位置):
+- **button** — 場面を閉じる一行 (余韻・引き):
+- **detonator** — 予想を裏切る強いビート (話に最低1つ):
+- **concrete_details** — 五感で書く具体物3つ:
+- **subtext** — 台詞の下で本当にやり取りされていること:
+- **skip_test** — この場面を飛ばしたら物語が壊れるか (壊れないなら削る/統合):
+- **pov_filter** — 視点人物の認知フィルター (何に気づき、何を見落とすか):
+- **voice_notes** — 声の指示 (`craft/voice.md` との対応):
+- **prose_floor** — 本文の下限字数 (下限であって目標ではない。水増し禁止):
+- **prohibit_summary** — true 固定 (要約体・ビート見出し・あらすじの清書を禁止):
 
 ## 承認記録
 

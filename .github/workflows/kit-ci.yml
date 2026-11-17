@@ -1,0 +1,26 @@
+name: kit-ci
+
+# vibe-sakka v2 の tools/ 自己テスト。外部依存なし・ネットワーク不要。
+on:
+  push:
+  pull_request:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: self-test (lint / export / release_gate / init_work)
+        run: python3 tools/selftest.py
+      - name: sample-work (lint + export --release)
+        run: |
+          python3 tools/manuscript_lint.py --workdir examples/sample-work \
+            examples/sample-work/out/*.md
+          python3 tools/export.py --workdir examples/sample-work \
+            --release --md --txt --no-report
