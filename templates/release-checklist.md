@@ -20,7 +20,7 @@ auto_report: reviews/release-<YYYYMMDD>.md
 
 - [ ] 全話に `polish` を通した (`reviews/polish-*.md` が1件以上)。
 - [ ] `beta-read` を外部コンテキストで実施した (`reviews/beta-*.md`)。
-- [ ] interest gate 合格 (high 0 / medium 2以下)。
+- [ ] interest gate: 記録あり。fail は作者判断で公開可 (改稿の材料)。
 - [ ] 全シーンの契約が `status: approved`。
 - [ ] `scenes/*.md` のヘッダが `polished: true`。
 

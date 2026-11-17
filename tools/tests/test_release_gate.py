@@ -104,14 +104,36 @@ class GateContractContentTest(GateTestBase):
         self.assertIn("beta", proc.stdout)
         self.assertIn("beta-*.md", proc.stdout)
 
-    def test_beta_must_be_external_and_pass(self):
+    def test_beta_external_required(self):
+        """external でない記録は error (未実施・自己採点を止める)。"""
         beta = self.workdir / "reviews" / "beta-第1話-20261117.md"
-        beta.write_text("# beta\n\n```yaml\ncontext: self\ninterest_gate: fail\n```\n",
-                        encoding="utf-8")
+        beta.write_text("# beta\n\n```yaml\ncontext: self\ninterest_gate: pass\n```\n"
+                        "\n| 1 | 冒頭フック | 3 | 「灯台」 |\n", encoding="utf-8")
         proc = self.run_gate()
         self.assertEqual(proc.returncode, 1)
         self.assertIn("external", proc.stdout)
-        self.assertIn("interest_gate", proc.stdout)
+
+    def test_beta_score_required(self):
+        """スコアカードの採点行がない記録は error。"""
+        beta = self.workdir / "reviews" / "beta-第1話-20261117.md"
+        beta.write_text("# beta\n\n```yaml\ncontext: external\ninterest_gate: pass\n```\n",
+                        encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("スコアの記載", proc.stdout)
+
+    def test_interest_fail_is_warning_not_error(self):
+        """interest_gate: fail は警告で合格 (公開可否は作者判断)。"""
+        beta = self.workdir / "reviews" / "beta-第1話-20261117.md"
+        beta.write_text(
+            "# beta\n\n```yaml\ncontext: external\ninterest_gate: fail\n```\n"
+            "\n| 1 | 冒頭フック | 3 | 「灯台」 |\n"
+            "| 3 | 意外性 | 1 | 弱い |\n"
+            "- high (0–1): 1件 / medium (2): 2件\n", encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("作者判断で公開可", proc.stdout)
+        self.assertIn("interest: fail", proc.stdout)
 
     def test_polish_content_is_checked(self):
         """空の polish 記録・数値なしは不合格 (fast M2 / deep M4)。"""

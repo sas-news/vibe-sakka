@@ -35,6 +35,8 @@ description: 生成済みシーンを計画順に連結して読める原稿を�
    `out/<title>.txt`、`--epub` で `out/<title>.epub`。
    - export は実行前に lint を走らせ、E があれば**書かずに失敗する**。
      `--no-lint` は使わない (使った場合は理由を記録する)。
+   - 作品に `tools/` が無い場合はキットの絶対パスで:
+     `python3 /path/to/vibe-sakka/tools/export.py --workdir /path/to/work --md ...`
    - 話見出し `## 第N話 タイトル` の挿入・YAML ヘッダ除去・`---` 区切りの
      処理はツールが行う。手で整えない。
    - シーン間に区切り (`◆` 等) を入れたい場合は `--separator "◆"` を付ける。

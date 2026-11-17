@@ -12,7 +12,7 @@ auto_report: reviews/release-20261117.md
 
 - [x] `polish` 済み (`reviews/polish-20261117.md`)
 - [x] `beta-read` を外部コンテキストで実施 (`reviews/beta-第1話-2026-11-17.md`、`context: external`)
-- [x] interest gate 合格 (high 0 / medium 0)
+- [x] interest gate: pass (high 0 / medium 0。fail でも作者判断で公開可)
 - [x] 全シーンの契約が `status: approved`
 - [x] `scenes/*.md` の `polished: true`
 
@@ -28,7 +28,7 @@ python3 tools/export.py --workdir . --release --md --txt
 
 - [x] lint (scenes): E 0件 / W 3件
 - [x] lint (out md): E 0件 / W 4件、lint (out txt): E 0件 / W 5件、lint (scenes): E 0件 / W 3件
-- [x] release_gate: exit 0 (beta 記録 external・interest_gate: pass を検査済み)
+- [x] release_gate: exit 0 (beta 記録 external・スコア記載を検査済み。合否は警告)
 - [x] export --release: exit 0、`out/` は `.md` `.txt` のみ
 - [x] 3コマンドを同じ原稿に対して実行した。
 

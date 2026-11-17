@@ -216,16 +216,75 @@ class LintUnitTest(unittest.TestCase):
             report = manuscript_lint.lint_text(text, name="x.md", min_chars=0)
             self.assertIn("L006", {finding.code for finding in report.errors}, text)
 
-    def test_l004_is_chapter_scoped(self):
-        """章内の同一文は E、章をまたぐ反復は W (M7 回帰)。"""
+    def _l004_severities(self, text):
+        report = manuscript_lint.lint_text(text, name="x.md", min_chars=0)
+        errors = [f for f in report.errors if f.code == "L004"]
+        warnings = [f for f in report.warnings if f.code == "L004"]
+        return errors, warnings
+
+    def test_l004_near_duplicate_is_error(self):
+        """近接 (3行以内) の同一行はコピペ痕跡として E。"""
+        line = "延滞して返せ。理由は、聞くな。"
+        text = f"## 第1話 朝\n\n{line}\n\n{line}\n"
+        errors, _ = self._l004_severities(text)
+        self.assertTrue(errors)
+
+    def test_l004_far_motif_is_warning(self):
+        """離れた同一行の反復 (モチーフ) は W で止めない。"""
+        line = "延滞して返せ。理由は、聞くな。"
+        text = (f"## 第1話 朝\n\n{line}\n\n窓の外は雨だった。\n\n"
+                f"ミナは黙っていた。\n\n海の音だけがした。\n\n{line}\n")
+        errors, warnings = self._l004_severities(text)
+        self.assertEqual(errors, [])
+        self.assertTrue(warnings)
+
+    def test_l004_cross_chapter_is_warning(self):
+        """章をまたぐ同一文の反復は W (意図的なモチーフを止めない)。"""
         sentence = "ミナは傘を置いて、しばらく黙っていた。窓の外は雨だった。"
-        within = f"## 第1話 朝\n\n{sentence}\n\n{sentence}\n"
-        report = manuscript_lint.lint_text(within, name="x.md", min_chars=0)
-        self.assertIn("L004", {finding.code for finding in report.errors})
-        across = (f"## 第1話 朝\n\n{sentence}\n\n## 第2話 夜\n\n{sentence}\n")
-        report = manuscript_lint.lint_text(across, name="x.md", min_chars=0)
-        self.assertEqual(report.errors, [])
-        self.assertIn("L004", {finding.code for finding in report.warnings})
+        text = f"## 第1話 朝\n\n{sentence}\n\n## 第2話 夜\n\n{sentence}\n"
+        errors, warnings = self._l004_severities(text)
+        self.assertEqual(errors, [])
+        self.assertTrue(warnings)
+
+    def test_w003_short_scene_is_info(self):
+        """2000字未満の場面で閾値外 (5%未満) は info どまり。"""
+        dialogue = "「延滞は、三日です。それなら、いい」"
+        narration = ("ミナは貸出票を裏返した。窓の外では雨が降っていて、"
+                     "古い映画の半券が机の角に貼りついている。" * 8)
+        report = manuscript_lint.lint_text(dialogue + "\n\n" + narration,
+                                           name="x.md", min_chars=0)
+        self.assertNotIn("W003", {f.code for f in report.warnings})
+        self.assertIn("W003", {f.code for f in report.infos})
+        self.assertLess(report.stats["chars"], 2000)
+        self.assertLess(report.stats["dialogue_ratio"], 0.05)
+
+    def test_w003_normal_ratio_is_silent(self):
+        """5〜90% の範囲なら W003 を出さない (独白 6%台の誤爆を防ぐ)。"""
+        dialogue = ("「延滞は、三日です。それなら、いい。"
+                    "けれど、返せない理由は、聞くな」")
+        narration = ("ミナは貸出票を裏返した。窓の外では雨が降っていて、"
+                     "古い映画の半券が机の角に貼りついている。" * 6)
+        report = manuscript_lint.lint_text(dialogue + "\n\n" + narration,
+                                           name="x.md", min_chars=0)
+        codes = {f.code for f in report.warnings + report.infos}
+        self.assertNotIn("W003", codes)
+        self.assertGreater(report.stats["dialogue_ratio"], 0.05)
+
+    def test_w003_long_low_dialogue_is_warning(self):
+        narration = "彼女は長い時間、窓の外の海を眺めていた。" * 110
+        report = manuscript_lint.lint_text(narration, name="x.md", min_chars=0)
+        self.assertGreater(report.stats["chars"], 2000)
+        self.assertIn("W003", {f.code for f in report.warnings})
+
+    def test_w007_ignores_plain_chapter_heading(self):
+        """export が作る `第1話 タイトル` 行は W007 の対象外。"""
+        report = manuscript_lint.lint_text(
+            "第1話 延滞三日\n\nミナは窓の外を見ていた。雨だった。",
+            name="x.md", min_chars=0)
+        self.assertNotIn("W007", {f.code for f in report.warnings})
+        bad = manuscript_lint.lint_text("今日 は、晴れだった。", name="x.md",
+                                        min_chars=0)
+        self.assertIn("W007", {f.code for f in bad.warnings})
 
     def test_strip_metadata(self):
         text = read(fixture("export_work") / "scenes" / "1-1.md")

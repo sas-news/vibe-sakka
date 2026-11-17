@@ -8,7 +8,7 @@ v2 は **規範・スキル・ツール・テンプレートを追加し、工�
 
 ## 1. キットをコピーする
 
-作品ディレクトリで:
+作品ディレクトリで (キットの `tools/` を絶対パスで呼ぶ場合):
 
 ```sh
 # 規範・スキル
@@ -70,10 +70,10 @@ v1 作品には `craft/` や `polished` フラグがないため、`--legacy` �
 
 ```sh
 # 原稿の衛生検査 (scenes との stale も見る)
-python3 tools/manuscript_lint.py --workdir . --legacy out/*.md
+python3 /path/to/vibe-sakka/tools/manuscript_lint.py --workdir . --legacy out/*.md
 
 # 公開ゲートの状態検査 (craft 欠落は warning 扱い)
-python3 tools/release_gate.py --workdir . --legacy
+python3 /path/to/vibe-sakka/tools/release_gate.py --workdir . --legacy
 ```
 
 検出される典型:
@@ -87,7 +87,7 @@ python3 tools/release_gate.py --workdir . --legacy
 
 `--fix` で安全なもの (BOM/CRLF、行末空白、空行過多、重複した末尾 `(了)`、
 区切り統一) は自動修復できる。本文の語句は書き換えない。**`--fix` は正本の
-`scenes/*.md` に対して行う** (`python3 tools/manuscript_lint.py --fix scenes/*.md`)。
+`scenes/*.md` に対して行う** (`python3 /path/to/vibe-sakka/tools/manuscript_lint.py --fix scenes/*.md`)。
 `out/` は export で再生成される派生物なので fix しない (`--workdir` を付けて
 `out/*.md` を fix しても、次の export で戻る)。
 
@@ -105,7 +105,7 @@ python3 tools/release_gate.py --workdir . --legacy
 3. 抽象語・感情語・比喩を具体物と動作に置換。
 4. 台詞だけ抜いて誰の発話か判別できるか確認。声を揃える。
 5. 章頭・章末のフックと引きを強化。
-6. `python3 tools/manuscript_lint.py --fix scenes/*.md` → E 0 を確認
+6. `python3 /path/to/vibe-sakka/tools/manuscript_lint.py --fix scenes/*.md` → E 0 を確認
    (`out/` は export の派生物なので fix しない)。
 7. `reviews/polish-<date>.md` に before/after 字数・削除率・主な変更を記録。
 
