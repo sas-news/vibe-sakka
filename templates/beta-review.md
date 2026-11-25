@@ -62,7 +62,7 @@ severity: high=読者が閉じる / medium=読み飛ばす / low=違和 / info=�
 
 rule: confusion / prerequisite / onboarding (初見の理解不足) / over-explain /
       tempo / emotion / flat_tone (淡々・温度不足) / predictable (予定調和・お使い) /
-      hook / entertainment / repetition / formula / vocabulary /
+      cliche (既視感) / hook / entertainment / repetition / formula / vocabulary /
       boring (退屈) / summary_body (要約体)
 -->
 

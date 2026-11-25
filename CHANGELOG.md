@@ -32,11 +32,14 @@
   `No, and furthermore` (失敗と悪化)・予定外の割り込み・判断ミス/取り乱し・
   敵役なりの筋の通った正義・日常のズレ/息抜きからの急転・身体で分かる小さな実験を
   義務ではなく任意選択の引き出しとして整備。
-- **計画・契約・サンプルの整合** (`plan-work`, `templates/plan-tree.md`,
-  `templates/writing-contract.md`, `orchestrator-dialogue`, `change-set`,
+- **計画・契約・サンプルの整合と手続き緩和** (`plan-work`, `templates/plan-tree.md`,
+  `templates/writing-contract.md`, `scene-craft`, `write-scene`, `orchestrator-dialogue`,
+  `change-set`, `AGENTS.md`, `README.md`, `docs/CRAFT.md`, `templates/interest-scorecard.md`,
   `examples/sample-work/craft/`):
-  計画段階での「お使い・巡礼構造」点検と意図的逸脱の扱い、`change-set` L0 の
-  `polished` フラグ記述の矛盾を解消。
+  計画段階での「お使い・巡礼構造」点検、`scratch/` による試作モードの明記、
+  契約 craft 欄の必須項目を 6 → 3 (`scene_job / want / turn`) に軽量化、
+  `button` の型拡張・既視感 (症状 16)・スコアカードのジャンル対象外 (N/A) 対応、
+  および `change-set` L0 の `polished` フラグ記述の矛盾解消。
 
 ### 修正 (ツール)
 
@@ -47,9 +50,13 @@
     `L007 stale export` が誤発火して更新できなくなるデッドロックを解消。
   - 初見向け補助線の追加等で推敲後に字数が微増した場合の負の `cut_rate` を許容。
 - `tools/manuscript_lint.py`:
+  - `L004` (重複) を近接 3 行以内のコピペ痕跡のみ E にし、離れたモチーフ・リフレイン
+    反復は W にとどめるように改善。
   - `W001` (感情の名指し) と `W009` (要約体) が台詞 (`「…」` / `『…』`) 内まで
     誤検出していた問題を修正し、地の文のみを検査対象に変更。あわせて「香辛料」
     「怒鳴る」「恐竜」「つらら」などの 1 文字誤爆を解消。
+  - `W003` (台詞比率) の閾値を `5% 未満 / 90% 超` (2,000 字未満は info) に緩和。
+  - `W007` (半角空白) で `export --txt` が出す `第N話 タイトル` 見出し行の誤爆を解消。
   - `L007` (stale export) の比較対象を `plan/tree.md` の公開順と一致させ、
     未採用のボツシーンが `scenes/` に残っていても誤検出しないように修正。
 - `tools/export.py`: `build_markdown` のシーン参照ループを `enumerate` に整理。

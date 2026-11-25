@@ -24,9 +24,9 @@ critic・自己興味監査 → 5. revise (整合性1回・興味2回まで) →
 
 1. `contracts/<scene>.md` が存在し **status: approved** であること。
 2. `plan/tree.md` でそのシーンが approved であること。
-3. 契約の craft 欄の必須項目 (**scene_job / dramatic_question / want /
-   obstacle / turn / cost**) が空でないこと。空なら
-   `.agents/skills/scene-craft/SKILL.md` に戻って設計する (書いてから埋めない)。
+3. 契約の craft 欄の必須項目 (**scene_job / want / turn** の3項目) が空でないこと
+   (他は必要に応じて埋める)。空なら `.agents/skills/scene-craft/SKILL.md` に戻って
+   設計する (まず自由に試作したいだけなら `scratch/` を使ってよい)。
 4. 契約の `base_revision` と `work.md` の `canon_revision` を比較し、
    以降に関連する正典変更があれば作者に確認してから進める。
 5. 契約がない・未承認・不足 → 生成を保留し、契約提案
