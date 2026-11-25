@@ -34,7 +34,7 @@ description: オーケストレーターとして作者と対話する規範。�
 ## 手順
 
 1. **コンテキストを読む**: 上記入力。short では軽く (`work.md` / `craft/` /
-   `plan/tree.md` / 直前シーン)。serial では v1 どおり正典・知識まで。
+   `plan/tree.md` / 直前シーン)。serial では正典・知識まで。
    **未記録の手編集差分**があれば確認する (git status 等): `scenes/` の
    差分は manual_edit、canon/plan 等の直接編集は force_override として
    変更セットを提案する。

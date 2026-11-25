@@ -388,5 +388,5 @@
 - `.agents/skills/spark/SKILL.md` — §1/§2 の実践
 - `.agents/skills/scene-craft/SKILL.md` — §4/§5/§6/§7 の実践
 - `.agents/skills/polish/SKILL.md` — §6/§7/§8 の実践 / `.agents/skills/release-gate/SKILL.md` — §10/§11 の実践
-- `examples/before-after.md` — v1 要約体 → v2 場面化の実例
+- `examples/before-after.md` — 要約体 → 場面化の実例
 - `tools/manuscript_lint.py` — §1原則4 (W001) / §8症状4 (W009) などの決定論検査

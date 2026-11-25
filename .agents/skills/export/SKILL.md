@@ -38,7 +38,7 @@ description: 生成済みシーンを計画順に連結して読める原稿を�
    - 話見出し `## 第N話 タイトル` の挿入・YAML ヘッダ除去・`---` 区切りの
      処理はツールが行う。手で整えない。
    - シーン間に区切り (`◆` 等) を入れたい場合は `--separator "◆"` を付ける。
-     md/txt で同じ区切りになる (v1 は md=◆ / txt=◇ で不一致だった)。
+     md/txt で同じ区切りに揃う。
 3. **公開版を確定する**:
    `python3 tools/export.py --workdir . --release`
    - `--release` は `tools/release_gate.py` の検査を通し、`out/` に公開物

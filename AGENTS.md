@@ -1,4 +1,4 @@
-# AGENTS.md — 物語創作ワークスペース規範 (v2)
+# AGENTS.md — 物語創作ワークスペース規範
 
 このディレクトリは AI 執筆ワークスペース。エージェント (あなた) はこの作品の
 **オーケストレーター兼作家**として振る舞う。
@@ -90,7 +90,7 @@ release-gate → export
 ### 連載モード (serial)
 
 `init_work.py --mode serial` で骨格を作り、spark → engine の順で面白さを設計する。
-以後は v1 の帳簿を維持しつつ、全工程に面白さのゲートを足す:
+以後は正典・知識・伏線・変更セットの帳簿を維持しつつ、全工程に面白さのゲートを足す:
 
 - 話ごとに `hook / promise / detonator / payoff` を計画に記入。
 - 章ごとに外部読者テスト。high 1 or medium 3 で自律停止 → 改稿。
@@ -192,9 +192,9 @@ release-gate → export
 
 - `docs/CRAFT.md` — 面白さの技芸 (フック・場面・台詞・具体化・退屈症状・採点)
 - `docs/PHILOSOPHY.md` — なぜ面白さを工程にするのか
-- `docs/DIAGNOSIS.md` — v1 の失敗モードと v2 の対応
-- `docs/DESIGN.md` — v2 の設計仕様 (tools I/F・スキル要件・DoD)
-- `docs/MIGRATION.md` — v1 作品の移行手順
+- `docs/DESIGN.md` — 設計仕様 (tools I/F・スキル要件・DoD)
+- `docs/DIAGNOSIS.md` — 過去版の失敗分析 (履歴資料)
+- `docs/MIGRATION.md` — 旧形式作品の移行手順
 - `docs/VERIFICATION.md` — 検証手順と実測値
 
 ### ツール (作品ディレクトリで実行)
@@ -220,8 +220,8 @@ release-gate → export
 
 ### 実例
 
-- `examples/before-after.md` — v1 要約体 → v2 場面化の実例 (規範の説明用)
-- `examples/sample-work/` — v2 規範で作った最小作品 (lint 0 / gate 合格)
+- `examples/before-after.md` — 要約体 → 場面化の実例 (規範の説明用)
+- `examples/sample-work/` — 規範に沿って作った最小作品 (lint 0 / gate 合格)
 - `examples/README.md` — 実例の読み方
 
 ## 検査の3層
@@ -257,16 +257,3 @@ release-gate → export
 - **続編・書きかけ原稿**: `init-work` の起点パターンで正典・登場要素を
   継承/取り込み、`craft/` を新規に作る。
 - どの形態でも「中断→status/pending からの再開」はファイルのまま可能。
-
-## v1 の失敗から学ぶ (再発防止)
-
-- **要約体の出荷**: 12話8,500字、全話が「一/二/三」のビート見出し。
-  → ルール2・`write-scene` の興味監査・lint L003 で防ぐ。
-- **推敲の不在**: `(了)` 重複、誤字、挿入破損を残したまま公開。
-  → ルール5・`polish`・lint L004/L009/L010 で防ぐ。
-- **資料の混入**: `out/` に企画書・調査リンク・スクリプトが同居。
-  → ルール6/7・`release-gate`・lint L001/L002 で防ぐ。
-- **水増しインセンティブ**: 字数不足を「膨張パス」で補う。
-  → `autonomy` で禁止、`polish` は水増しを禁じノイズを削って味を残す。
-- **整合性だけで「面白い」と報告**: レビューが「禁止 OK / 出荷可」で終わる。
-  → ルール4・`beta-read` の興味スコアカードを必須化。

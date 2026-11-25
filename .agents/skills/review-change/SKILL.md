@@ -5,7 +5,7 @@ description: 適用済み変更セット・強制改変・手編集の事後レ�
 
 # review-change — 変更の事後レビュー
 
-変更セット適用・force_override・manual_edit の後に走る。v2 では整合性に
+変更セット適用・force_override・manual_edit の後に走る。整合性に
 加えて「要約体・ビート見出し・感情の名指し・退屈」を検査する。
 
 ## いつ使うか
