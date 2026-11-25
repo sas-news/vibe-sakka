@@ -166,7 +166,7 @@ def build_markdown(title: str, refs: list[SceneRef], plan: Plan | None,
         parts.append("")
     current_episode: int | None = None
     scenes_included: list[str] = []
-    for ref in refs:
+    for idx, ref in enumerate(refs):
         if ref.episode != current_episode:
             chapter_title = ""
             if plan is not None:
@@ -179,7 +179,7 @@ def build_markdown(title: str, refs: list[SceneRef], plan: Plan | None,
             current_episode = ref.episode
         body = scene_body(workdir / "scenes" / f"{ref.scene_id}.md")
         parts.append(body)
-        nxt = refs[refs.index(ref) + 1] if refs.index(ref) + 1 < len(refs) else None
+        nxt = refs[idx + 1] if idx + 1 < len(refs) else None
         if separator and nxt is not None and nxt.episode == ref.episode:
             parts.append(separator)
         parts.append("")

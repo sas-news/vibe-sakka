@@ -113,6 +113,25 @@ class GateContractContentTest(GateTestBase):
         self.assertIn("external", proc.stdout)
         self.assertIn("interest_gate", proc.stdout)
 
+    def test_beta_latest_pass_overrides_earlier_fail(self):
+        """同一対象で古い fail 記録が残っていても、最新の external+pass で合格する。"""
+        earlier = self.workdir / "reviews" / "beta-第1話-20261116.md"
+        earlier.write_text(
+            "# beta\n\n```yaml\ntarget: 第1話\ndate: 2026-11-16\n"
+            "context: external\ninterest_gate: fail\n```\n",
+            encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        # 別対象に未解決の fail があれば不合格のまま
+        other_fail = self.workdir / "reviews" / "beta-第2話-20261117.md"
+        other_fail.write_text(
+            "# beta\n\n```yaml\ntarget: 第2話\ndate: 2026-11-17\n"
+            "context: external\ninterest_gate: fail\n```\n",
+            encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("beta-第2話-20261117.md", proc.stdout)
+
     def test_polish_content_is_checked(self):
         """空の polish 記録・数値なしは不合格 (fast M2 / deep M4)。"""
         polish = self.workdir / "reviews" / "polish-20261101.md"
@@ -124,6 +143,16 @@ class GateContractContentTest(GateTestBase):
         proc = self.run_gate()
         self.assertEqual(proc.returncode, 1)
         self.assertIn("before/after", proc.stdout)
+
+    def test_polish_negative_cut_rate_allowed(self):
+        """初見向け補助線の追加等で字数が微増 (負の cut_rate) しても合格する。"""
+        polish = self.workdir / "reviews" / "polish-20261101.md"
+        polish.write_text(
+            "# polish\n\n```yaml\ndate: 2026-11-17\neditor: ai\n"
+            "before_chars: 1000\nafter_chars: 1040\ncut_rate: -0.04\n```\n",
+            encoding="utf-8")
+        proc = self.run_gate()
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
     def test_empty_template_work_is_ng(self):
         """templates/work.md を空のままコピーした作品は不合格 (deep M1)。"""

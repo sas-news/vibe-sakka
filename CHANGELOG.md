@@ -1,5 +1,59 @@
 # CHANGELOG
 
+## v2.1.0 — 2026-11-24
+
+**実作品検証ベースの柔軟化・診断解像度アップ。** 新しい義務や禁止を増やさず、
+「減点されない文芸の型」への均質化を防ぎながら、作品固有の熱量・クセ・推進力・
+完全初見への伝わりやすさを引き上げる土台へ調整。
+
+### 変更
+
+- **既定指針の柔軟化と厳格ゲートの分離** (`AGENTS.md`, `README.md`, `docs/PHILOSOPHY.md`,
+  `docs/DESIGN.md`, `docs/CRAFT.md`, `release-gate`, `write-scene`, `scene-craft`):
+  冒頭3段落の型・感情名指し回避・転と代償などを「迷ったときの強力なデフォルト」と
+  位置づけ、`craft/engine.md` / `craft/voice.md` で狙いを宣言すれば意図的に外せる
+  ことを明記。機械的な厳格ゲートは `manuscript_lint.py` / `release_gate.py` の
+  衛生・工程面に寄せる。
+- **作品ごとの面白さの源泉と「削らない味」の言語化** (`spark`, `init-work`,
+  `templates/craft-engine.md`, `templates/craft-voice.md`):
+  `craft/engine.md` に「面白さの源泉 (何で読者を引っ張るか)」「意図的な逸脱 (任意)」、
+  `craft/voice.md` に「削らない味 (意図的な過剰さ・クセ・息抜き)」を追加。
+- **`beta-read` の診断解像度アップ** (`beta-read`, `docs/CRAFT.md` §10/§11,
+  `templates/interest-scorecard.md`, `templates/beta-review.md`):
+  外部初読者テストに「離脱ポイント」「推進力と予定調和 (お使い進行の検知)」
+  「温度と人物の厚み」「完全初見の理解度」の診断用の問いを追加。
+- **`polish` を一律削減から「ノイズを削り味を残す」へ** (`polish`, `autonomy`,
+  `templates/polish-report.md`, `docs/MIGRATION.md`, `tools/README.md`):
+  10–20% 削減を機械的な目標から外し、AI特有の冗長な言い換え・説明過多は容赦なく
+  削りつつ、`craft/voice.md` の「削らない味」と初見向けの最小限の補助線を守る
+  優先順位を明記。推敲記録に「守った味」欄を追加。
+- **展開が淡々としたときの打開策カタログ (オプション)** (`docs/CRAFT.md` §4,
+  `scene-craft`, `write-scene`, `plan-work`, `orchestrator-dialogue`):
+  `No, and furthermore` (失敗と悪化)・予定外の割り込み・判断ミス/取り乱し・
+  敵役なりの筋の通った正義・日常のズレ/息抜きからの急転・身体で分かる小さな実験を
+  義務ではなく任意選択の引き出しとして整備。
+- **計画・契約・サンプルの整合** (`plan-work`, `templates/plan-tree.md`,
+  `templates/writing-contract.md`, `orchestrator-dialogue`, `change-set`,
+  `examples/sample-work/craft/`):
+  計画段階での「お使い・巡礼構造」点検と意図的逸脱の扱い、`change-set` L0 の
+  `polished` フラグ記述の矛盾を解消。
+
+### 修正 (ツール)
+
+- `tools/release_gate.py`:
+  - `beta-*.md` を対象 (`target`) ごとに最新記録で判定するように修正
+    (revise 前の `fail` 履歴が残っていても、改稿後の `external` + `pass` で合格する)。
+  - `export.py --release` で staging 差し替え予定の旧 `out/<name>` に対して
+    `L007 stale export` が誤発火して更新できなくなるデッドロックを解消。
+  - 初見向け補助線の追加等で推敲後に字数が微増した場合の負の `cut_rate` を許容。
+- `tools/manuscript_lint.py`:
+  - `W001` (感情の名指し) と `W009` (要約体) が台詞 (`「…」` / `『…』`) 内まで
+    誤検出していた問題を修正し、地の文のみを検査対象に変更。あわせて「香辛料」
+    「怒鳴る」「恐竜」「つらら」などの 1 文字誤爆を解消。
+  - `L007` (stale export) の比較対象を `plan/tree.md` の公開順と一致させ、
+    未採用のボツシーンが `scenes/` に残っていても誤検出しないように修正。
+- `tools/export.py`: `build_markdown` のシーン参照ループを `enumerate` に整理。
+
 ## v2.0.0 — 2026-11-17
 
 **「面白さを工程にする」大改修。** v1 は破綻しない退屈を量産した。

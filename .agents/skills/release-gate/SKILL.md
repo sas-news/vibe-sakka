@@ -108,12 +108,16 @@ python3 tools/export.py --workdir . --release --md --txt
 
 ### 5. 意味判断を記録で確認する (自動化できない項目)
 
-gate は決定的項目しか見ない。以下は `templates/release-checklist.md` で
-1話ずつ確認し、`reviews/release-checklist-<YYYYMMDD>.md` に記録する
-(自動レポート `reviews/release-<YYYYMMDD>.md` とは別ファイル。gate は
-そちらを上書きするが、手動チェックリストには触れない)。
+機械的な厳格ゲートは衛生・工程面 (`manuscript_lint.py` / `release_gate.py`) に寄せ、
+表現面は `craft/engine.md` / `craft/voice.md` に宣言された狙い (意図的な逸脱を
+含む) を尊重する。以下は `templates/release-checklist.md` で1話ずつ確認し、
+`reviews/release-checklist-<YYYYMMDD>.md` に記録する (自動レポート
+`reviews/release-<YYYYMMDD>.md` とは別ファイル。gate はそちらを上書きするが、
+手動チェックリストには触れない)。
 
-- [ ] **全話 hook/pull**: 各話の冒頭3行に問いがあり、章末に未解決の引きがある。
+- [ ] **全話 hook/pull**: 各話の冒頭3行に問いがあり、章末に未解決の引きがある
+      (`craft/engine.md` / `craft/voice.md` に静かな余韻等の意図的な逸脱を
+      宣言している場合は、その狙いが機能しているか確認する)。
 - [ ] **外部読者テスト**: 全話 (または設定した単位) で `beta-read` 済み。
       `reviews/beta-*.md` に `context: external` と `interest_gate: pass` が
       あり、`templates/interest-scorecard.md` の判定が high 1 / medium 3 未満。

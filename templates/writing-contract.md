@@ -43,6 +43,9 @@ scene_type: real       # real | dream | memory | hypothetical | other
 > 本文生成の入力。`scene_job` / `dramatic_question` / `want` / `obstacle` /
 > `turn` / `cost` が空のまま approved にしない。空なら
 > `.agents/skills/scene-craft/SKILL.md` に戻って設計する。
+> 静かな余韻・日常の呼吸など `craft/engine.md` / `craft/voice.md` に意図的な
+> 逸脱を宣言している場合は、`turn` / `cost` 欄にその狙い (変化の代わりに残す
+> 温度・余韻等) を記入すればよい。
 > 記入例: `turn: ソラは「開く」を自慢するつもりで来て、自分が最後の一人だと知る。`
 
 - **scene_job** — この場面が物語で果たす仕事 (1文):
@@ -59,7 +62,7 @@ scene_type: real       # real | dream | memory | hypothetical | other
 - **subtext** — 台詞の下で本当にやり取りされていること:
 - **skip_test** — この場面を飛ばしたら物語が壊れるか (壊れないなら削る/統合):
 - **pov_filter** — 視点人物の認知フィルター (何に気づき、何を見落とすか):
-- **voice_notes** — 声の指示 (`craft/voice.md` との対応):
+- **voice_notes** — 声と「削らない味」の指示 (`craft/voice.md` との対応):
 - **prose_floor** — 本文の下限字数 (下限であって目標ではない。水増し禁止):
 - **prohibit_summary** — true 固定 (要約体・ビート見出し・あらすじの清書を禁止):
 

@@ -18,7 +18,7 @@ description: オーケストレーターとして作者と対話する規範。�
 - `work.md` — **最初に `mode` と「面白さの設計」を読む**。short なら
   帳簿 (canon/ 全量・変更セット) の質問をしない。
 - `dialogue.md` 末尾 (直近の決定)。
-- `plan/tree.md` と `craft/engine.md` (今どこまで面白さを設計したか)。
+- `plan/tree.md` と `craft/engine.md`・`craft/voice.md` (今どこまで面白さと味を設計したか)。
 - pending の `proposals/`。
 - serial のときだけ `canon/facts.md`・`entities.md`・`knowledge.md` も読む。
 
@@ -45,9 +45,10 @@ description: オーケストレーターとして作者と対話する規範。�
    - 企画・角度・ログライン・フック → `.agents/skills/spark/SKILL.md`
    - 話の構成・引き・デトネーター → `.agents/skills/plan-work/SKILL.md`
    - 場面の欲求・障害・転・代償 → `.agents/skills/scene-craft/SKILL.md`
-   - 書いた本文が退屈・要約っぽい・説明過多 → `write-scene` の興味 revise
-     か `.agents/skills/polish/SKILL.md`
-   - 読者の反応を知りたい・つまらないと言われた →
+   - 書いた本文が退屈・要約っぽい・説明過多・淡々としている・予定調和 →
+     `craft/voice.md` の「削らない味」や `docs/CRAFT.md` §4 の打開策カタログを
+     確認し、`write-scene` の興味 revise か `.agents/skills/polish/SKILL.md` へ
+   - 読者の反応や初見の理解度を知りたい・つまらないと言われた →
      `.agents/skills/beta-read/SKILL.md`
    決まった方針は `work.md` の「面白さの設計」か `craft/engine.md`・
    `craft/voice.md` に書く。**正典 (事実) と面白さの設計 (方針) を混ぜない。**

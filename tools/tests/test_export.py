@@ -236,6 +236,15 @@ class ExportGateTest(ExportTestBase):
         self.assertTrue((self.workdir / "out" / "星の名前.md").is_file())
         self.assertTrue((self.workdir / "out" / "星の名前.txt").is_file())
 
+    def test_release_updates_stale_out(self):
+        """scenes/ 更新後に古い out/*.md が残っていても --release で安全に差し替えられる。"""
+        scene = self.workdir / "scenes" / "1-1.md"
+        scene.write_text(read(scene) + "\n波の音が、石段の奥まで響いた。\n", encoding="utf-8")
+        proc = run_tool("export.py", "--workdir", self.workdir, "--release",
+                        "--txt", "--no-report")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("波の音が、石段の奥まで響いた。", read(self.out_md))
+
     def test_plan_error_mentions_v1_rename(self):
         plan = self.workdir / "plan" / "tree.md"
         plan.write_text("| 1 | I | 灯 | reviewed |\n", encoding="utf-8")

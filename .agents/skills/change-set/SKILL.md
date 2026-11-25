@@ -24,7 +24,7 @@ description: 正典・設定・計画・本文の変更を分類→影響分析�
 
 | 対象 | short での扱い |
 | --- | --- |
-| L0 表現のみ (推敲・誤字・表記統一・`polish` の削減/具体化) | **変更セット不要**。`reviews/polish-*.md` に記録し、`python3 tools/manuscript_lint.py` を通す。`scenes/` の rev を +1 し `polished: false` に戻す |
+| L0 表現のみ (推敲・誤字・表記統一・`polish` のノイズ削減/具体化) | **変更セット不要**。`python3 tools/manuscript_lint.py` を通し、本文を書き換えたら `scenes/` の rev を +1。`polish` 工程なら `reviews/polish-*.md` に記録して `polished: true` にする (それ以外の L0 編集は `polished: false` に戻す) |
 | L1 シーン意味変更 (台詞・行動・結果) | 簡略変更セット (ops + 影響シーン + 承認)。`canon/history.md` 追記は正典を変える場合のみ |
 | L2 正典・人物・時系列・伏線 | 通常フロー (影響分析 + 明示承認 + canon/history + canon_revision +1 + レビュー) |
 | L3 基盤変更/Retcon | 通常フロー + 再計画範囲の明示。明示承認なしに適用しない |

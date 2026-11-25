@@ -44,10 +44,13 @@ ENGINE_ITEMS = ("約束", "欲求", "対立", "代償", "時計", "快楽", "禁
 #: beta 記録 (外部読者テスト) の必須マーカー。
 EXTERNAL_RE = re.compile(r"(?mi)^\s*(?:reader|context)\s*:\s*external\b")
 GATE_PASS_RE = re.compile(r"(?mi)^\s*interest_gate\s*:\s*pass\b")
-#: 推敲記録の数値。
+BETA_TARGET_RE = re.compile(r'(?mi)^\s*target\s*:\s*"?([^"#\n]+?)"?\s*(?:#.*)?$')
+BETA_DATE_RE = re.compile(r"(?mi)^\s*date\s*:\s*(\d{4}-\d{2}-\d{2})\b")
+BETA_NAME_DATE_RE = re.compile(r"-\d{4}-?\d{2}-?\d{2}(?:-r\d+)?$")
+#: 推敲記録の数値 (補助線追加等で微増した負の cut_rate も許容)。
 BEFORE_RE = re.compile(r"(?mi)^\s*before_chars\s*:\s*(\d+)")
 AFTER_RE = re.compile(r"(?mi)^\s*after_chars\s*:\s*(\d+)")
-CUT_RE = re.compile(r"(?mi)^\s*cut_rate\s*:\s*([0-9]*\.?[0-9]+)")
+CUT_RE = re.compile(r"(?mi)^\s*cut_rate\s*:\s*(-?[0-9]*\.?[0-9]+)")
 #: 伏線の回収期限は `期限: YYYY-MM-DD` の直後だけを読む。
 DEADLINE_RE = re.compile(r"期限\s*[:：]\s*(\d{4})-(\d{2})-(\d{2})")
 FS_CHUNK_RE = re.compile(r"^[-*]\s*\(fs\d+\)|^\|.*\bfs\d+\b")
@@ -367,8 +370,26 @@ def check_plan(result: GateResult) -> None:
     result.allow("plan", f"{len(scene_ids)} シーンを計画から確認")
 
 
+def _beta_group_key(path: Path, text: str) -> tuple[str, tuple[str, str]]:
+    """beta-*.md の対象キーと新しさソートキー (date, filename) を返す。"""
+    yaml_block = _yaml_block(text)
+    target_match = BETA_TARGET_RE.search(yaml_block)
+    if target_match and not _is_placeholder(target_match.group(1), instruction=False):
+        target = target_match.group(1).strip()
+    else:
+        stem = path.stem[len("beta-"):] if path.stem.startswith("beta-") else path.stem
+        target = BETA_NAME_DATE_RE.sub("", stem) or path.stem
+    date_match = BETA_DATE_RE.search(yaml_block)
+    date_key = date_match.group(1) if date_match else ""
+    return target, (date_key, path.name)
+
+
 def check_beta(result: GateResult) -> None:
-    """外部読者テスト (reviews/beta-*.md) の中身検査。"""
+    """外部読者テスト (reviews/beta-*.md) の中身検査。
+
+    同一対象に複数回の記録がある場合は最新記録で合否を判定する
+    (revise 前の fail 履歴を残したまま、改稿後の pass で合格できるようにする)。
+    """
     reviews = result.workdir / "reviews"
     records = sorted(reviews.glob("beta-*.md")) if reviews.is_dir() else []
     errors_before = len(result.errors)
@@ -377,11 +398,17 @@ def check_beta(result: GateResult) -> None:
         result.error("beta", "reviews/beta-*.md がありません "
                              "(外部読者テストの記録が必須。v1 でも error)")
         return
+    latest_by_target: dict[str, tuple[tuple[str, str], Path, str]] = {}
     for path in records:
         text = _read(path)
         if not text.strip():
             result.error("beta", f"{path.name} が空です")
             continue
+        target, sort_key = _beta_group_key(path, text)
+        prev = latest_by_target.get(target)
+        if prev is None or sort_key >= prev[0]:
+            latest_by_target[target] = (sort_key, path, text)
+    for _, path, text in latest_by_target.values():
         if not EXTERNAL_RE.search(text):
             result.error("beta", f"{path.name} に external の記録がありません "
                                  "(`reader: external` / `context: external`)")
@@ -389,7 +416,7 @@ def check_beta(result: GateResult) -> None:
             result.error("beta", f"{path.name} が interest_gate: pass ではありません "
                                  "(high 1 or medium 3 で不合格)")
     if len(result.errors) == errors_before:
-        result.allow("beta", f"beta 記録 {len(records)} 件")
+        result.allow("beta", f"beta 記録 {len(records)} 件 (対象 {len(latest_by_target)} 件すべて合格)")
 
 
 def check_foreshadowing(result: GateResult, today: date) -> None:
@@ -464,7 +491,7 @@ def check_polish_records(result: GateResult) -> None:
         cut = CUT_RE.search(text)
         numbers_ok = bool(before and int(before.group(1)) > 0
                           and after and int(after.group(1)) > 0)
-        cut_ok = bool(cut) and 0.0 <= float(cut.group(1)) <= 1.0
+        cut_ok = bool(cut) and -1.0 <= float(cut.group(1)) <= 1.0
         if not numbers_ok and not cut_ok:
             result.error(
                 "polish", f"{path.name} に before/after 字数または cut_rate がありません "
@@ -528,10 +555,13 @@ def _record_lint(result: GateResult, report, label: str) -> None:
 def check_lint(result: GateResult, extra_manuscripts: list[Path] | None = None) -> None:
     """out/*.md・out/*.txt・scenes/*.md・staging 原稿を lint して E 0 を要求する。"""
     out_dir = result.workdir / "out"
+    staged_names = {path.name for path in (extra_manuscripts or [])}
     manuscripts: list[Path] = []
     if out_dir.is_dir():
+        # --release の staging で差し替え予定の旧 out/<name> は除外し、staging 側を検査する
         manuscripts = [path for path in sorted(out_dir.iterdir())
-                       if path.suffix.lower() in (".md", ".txt")]
+                       if path.suffix.lower() in (".md", ".txt")
+                       and path.name not in staged_names]
     if not manuscripts and not extra_manuscripts:
         result.error("lint", "out/ に原稿 (.md/.txt) がありません")
         return

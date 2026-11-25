@@ -89,13 +89,15 @@ L011_SCENE_ID_RE = re.compile(r"シーン\s*\d+-\d+")
 L011_BARE_ID_RE = re.compile(r"^\d+-\d+$")
 
 #: 警告の語彙・閾値。
-EMOTION_WORDS = ("悲し", "哀し", "嬉し", "うれし", "怖", "恐", "寂し", "さびし",
-                 "つら", "辛", "美し", "すご", "とても", "楽しか", "悔し", "怒",
-                 "不安", "安心", "好き", "嫌い")
+EMOTION_WORDS = ("悲し", "哀し", "嬉し", "うれし", "怖", "恐ろし", "恐れ", "寂し",
+                 "さびし", "つらい", "つらか", "つらく", "辛い", "辛か", "辛く",
+                 "美し", "すご", "とても", "楽しか", "悔し", "怒った", "怒り",
+                 "怒って", "不安", "安心", "好き", "嫌い")
 ABSTRACT_WORDS = ("気持ち", "感じ", "こと", "もの")
 VERB_WORDS = ("言った", "思った", "見た")
 SUMMARY_PATTERNS = (re.compile(r"ことにな(?:る|った|り)"), re.compile(r"のである"),
                     re.compile(r"のだろう"), re.compile(r"だろう"))
+DIALOGUE_RE = re.compile(r"[「『][^」』\n]*[」』]")
 SENTENCE_SPLIT_RE = re.compile(r"[。．！？!?]+")
 JP_CHAR_RE = re.compile(r"[^\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]")
 JP_RANGE = r"\u3040-\u30ff\u4e00-\u9fff"
@@ -153,6 +155,11 @@ def dialogue_chars(text: str) -> int:
     """「」『』内の文字数 (台詞比率の分子)。"""
     return sum(content_chars(match.group(1))
                for match in re.finditer(r"[「『](.*?)[」』]", text))
+
+
+def _strip_dialogue(text: str) -> str:
+    """「」『』内の台詞を除いた地の文を返す (W001/W009 の台詞誤爆防止)。"""
+    return DIALOGUE_RE.sub("", text)
 
 
 
@@ -529,17 +536,20 @@ def _check_short_chapters(report: Report, body: list[tuple[int, str]],
 
 
 def _check_density(report: Report, body: list[tuple[int, str]], name: str,
-                   code: str, category: str, words, threshold: float) -> None:
+                   code: str, category: str, words, threshold: float,
+                   narration_only: bool = False) -> None:
     """語彙密度の警告 (W001 / W002 / W009)。"""
-    full_text = "\n".join(text for _, text in body)
+    lines = [(lineno, _strip_dialogue(text) if narration_only else text)
+             for lineno, text in body]
+    full_text = "\n".join(text for _, text in lines)
     chars = content_chars(full_text)
     if callable(words):
         count = words(full_text)
-        hit_line = next((lineno for lineno, text in body if words(text)),
+        hit_line = next((lineno for lineno, text in lines if words(text)),
                         body[0][0] if body else 1)
     else:
         count = sum(full_text.count(word) for word in words)
-        hit_line = next((lineno for lineno, text in body
+        hit_line = next((lineno for lineno, text in lines
                          if any(word in text for word in words)),
                         body[0][0] if body else 1)
     density = _density(count, chars)
@@ -705,12 +715,40 @@ def _read_body(path: Path) -> tuple[list[tuple[int, str]], list[str]]:
     return _strip_metadata(source.text.splitlines()), source.encoding_errors
 
 
+PLAN_CHAPTER_RE = re.compile(r"^##\s+第(\d+)話(?:\s+(.*))?$")
+PLAN_SCENE_RE = re.compile(r"^[-*]\s+シーン\s+`?(\d+)-(\d+)`?")
+
+
+def _plan_scene_files(workdir: Path, scenes_dir: Path) -> list[Path] | None:
+    """plan/tree.md が読めれば、その公開順に該当する scenes/*.md を返す。"""
+    tree_path = workdir / "plan" / "tree.md"
+    if not tree_path.is_file():
+        return None
+    scene_ids: list[str] = []
+    current_episode: int | None = None
+    for line in tree_path.read_text(encoding="utf-8").splitlines():
+        if PLAN_CHAPTER_RE.match(line):
+            current_episode = 1
+            continue
+        match = PLAN_SCENE_RE.match(line)
+        if match and current_episode is not None:
+            scene_ids.append(f"{int(match.group(1))}-{int(match.group(2))}")
+    if not scene_ids:
+        return None
+    paths = [scenes_dir / f"{scene_id}.md" for scene_id in scene_ids]
+    if all(path.is_file() for path in paths):
+        return paths
+    return None
+
+
 def _scenes_combined(workdir: Path) -> str:
     """scenes/*.md の本文を正規化して連結した文字列 (stale 比較用)。"""
     scenes_dir = workdir / "scenes"
     if not scenes_dir.is_dir():
         return ""
-    scene_files = sorted(scenes_dir.glob("*.md"), key=_scene_sort_key)
+    scene_files = _plan_scene_files(workdir, scenes_dir)
+    if scene_files is None:
+        scene_files = sorted(scenes_dir.glob("*.md"), key=_scene_sort_key)
     return "".join(_normalize_for_compare(_read_body(path)[0])
                    for path in scene_files)
 
@@ -797,7 +835,7 @@ def lint_source(source: Source, legacy: bool = False,
     _check_separators(report, body, source.display)
     _check_short_chapters(report, body, chapters, source.display, min_chars)
     _check_density(report, body, source.display, "W001", "emotion",
-                   EMOTION_WORDS, THRESHOLDS["W001"][0])
+                   EMOTION_WORDS, THRESHOLDS["W001"][0], narration_only=True)
     _check_density(report, body, source.display, "W002", "abstract",
                    ABSTRACT_WORDS, THRESHOLDS["W002"][0])
     dialogue = _check_dialogue(report, body, source.display)
@@ -808,7 +846,7 @@ def lint_source(source: Source, legacy: bool = False,
     _check_per_chapter_style(report, body, chapters, source.display)
     _check_density(report, body, source.display, "W009", "summary",
                    lambda text: sum(len(p.findall(text)) for p in SUMMARY_PATTERNS),
-                   THRESHOLDS["W009"][0])
+                   THRESHOLDS["W009"][0], narration_only=True)
     report.stats.update(_compute_stats(body, chapters, dialogue))
     report.stats["scenes"] = 1 if _scene_like(source.path) else 0
     report.files.append(source.display)

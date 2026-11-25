@@ -252,6 +252,32 @@ class LintUnitTest(unittest.TestCase):
         report = manuscript_lint.lint_text(text, name="dialogue.md")
         self.assertGreater(report.stats["dialogue_ratio"], 0)
 
+    def test_w001_and_w009_ignore_dialogue_and_non_emotion_compounds(self):
+        """台詞内の感情語・『だろう』や、怒鳴る・香辛料などで W001/W009 が誤爆しない。"""
+        text = (
+            "「怖かったし悲しかったし、たぶん明日も雨だろう」と彼は言った。\n\n"
+            "「好きでも嫌いでもないだろう。とても嬉しいはずがないだろう」\n\n"
+            "店主は香辛料を鍋に落とし、店の奥から怒鳴った。軒先につららが下がり、"
+            "棚の隅には恐竜の模型が並んでいた。"
+        )
+        report = manuscript_lint.lint_text(text, name="dialogue_ok.md", min_chars=0)
+        warn_codes = {finding.code for finding in report.warnings}
+        self.assertNotIn("W001", warn_codes)
+        self.assertNotIn("W009", warn_codes)
+
+    def test_stale_respects_plan_order_and_ignores_unlisted_scene(self):
+        """plan/tree.md に無いボツシーンが scenes/ にあっても L007 を誤検出しない。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp) / "work"
+            shutil.copytree(fixture("export_work"), workdir)
+            (workdir / "scenes" / "9-1.md").write_text(
+                "```yaml\nscene: 9-1\n```\n---\nボツになった別案の場面。\n",
+                encoding="utf-8")
+            proc = run_tool("manuscript_lint.py", "--workdir", workdir,
+                            workdir / "out" / "星の名前.md")
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertNotIn("L007", codes(proc.stdout))
+
 
 if __name__ == "__main__":
     unittest.main()
